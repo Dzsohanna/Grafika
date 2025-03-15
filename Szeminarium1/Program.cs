@@ -140,15 +140,16 @@ namespace Szeminarium1
             }*/
 
             Gl.BufferData(GLEnum.ArrayBuffer, (ReadOnlySpan<float>)vertexArray.AsSpan(), GLEnum.StaticDraw);
+            Gl.EnableVertexAttribArray(0); //0
             Gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 0, null);
-            Gl.EnableVertexAttribArray(2); //0
+            //Gl.EnableVertexAttribArray(0); //0
 
-            var error = Gl.GetError();
+            /*var error = Gl.GetError();
             if (error != GLEnum.NoError)
             {
                 Console.WriteLine($"{error}");
                 //hiba mert a shaderben nincs megfelelo layout(location=2) ezert nem talalja azt
-            }
+            }*/
 
             uint colors = Gl.GenBuffer();
 
@@ -162,14 +163,14 @@ namespace Szeminarium1
             Gl.BindBuffer(GLEnum.ArrayBuffer, colors); //sor csere
             Gl.BufferData(GLEnum.ArrayBuffer, (ReadOnlySpan<float>)colorArray.AsSpan(), GLEnum.StaticDraw);
             Gl.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 0, null);
-            Gl.EnableVertexAttribArray(3); //1
+            //Gl.EnableVertexAttribArray(1); //1
 
-            var error1 = Gl.GetError();
+            /*var error1 = Gl.GetError();
             if (error1 != GLEnum.NoError)
             {
                 Console.WriteLine($"{error1}");
                 //hiba mert a shaderben nincs megfelelo layout(location=3) ezert nem talalja azt
-            }
+            }*/
 
             uint indices = Gl.GenBuffer();
             Gl.BindBuffer(GLEnum.ElementArrayBuffer, indices);
