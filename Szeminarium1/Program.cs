@@ -129,21 +129,30 @@ namespace Szeminarium1
             };
 
             uint vertices = Gl.GenBuffer();
-            //Gl.BindBuffer(GLEnum.ArrayBuffer, vertices);
+            Gl.BindBuffer(GLEnum.ArrayBuffer, vertices); //komment
+
+            /*
             var error = Gl.GetError();
             if (error != GLEnum.NoError)
             {
                 Console.WriteLine($"{error}");
                 //hiba lesz mert nem lesz kijelolve hogy melyik bufferrel akarunk majd dolgozni es nem leszs ahova betoltse az adatokat
-            }
+            }*/
 
             Gl.BufferData(GLEnum.ArrayBuffer, (ReadOnlySpan<float>)vertexArray.AsSpan(), GLEnum.StaticDraw);
             Gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 0, null);
             Gl.EnableVertexAttribArray(0);
 
             uint colors = Gl.GenBuffer();
-            Gl.BindBuffer(GLEnum.ArrayBuffer, colors);
             Gl.BufferData(GLEnum.ArrayBuffer, (ReadOnlySpan<float>)colorArray.AsSpan(), GLEnum.StaticDraw);
+            var error = Gl.GetError();
+            if (error != GLEnum.NoError)
+            {
+                Console.WriteLine($"{error}");
+                //hiba lesz mert az adatokat tovabbra is a vertices bufferbe tolti be nem a colorsba 
+            }
+            Gl.BindBuffer(GLEnum.ArrayBuffer, colors); //sor csere
+            //Gl.BufferData(GLEnum.ArrayBuffer, (ReadOnlySpan<float>)colorArray.AsSpan(), GLEnum.StaticDraw);
             Gl.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 0, null);
             Gl.EnableVertexAttribArray(1);
 
