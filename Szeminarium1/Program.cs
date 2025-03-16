@@ -79,10 +79,11 @@ namespace Szeminarium1
             //ha kicserelem a ket compilet akkor az expection lesz kiirva mert nem lesz compilalva a vshader
 
             program = Gl.CreateProgram();
-            Gl.AttachShader(program, fshader);
+            //Gl.AttachShader(program, fshader); //semmilyen hiba nem lesz
             Gl.AttachShader(program, vshader);
-            //Gl.AttachShader(program, fshader);
             Gl.LinkProgram(program);
+            Gl.AttachShader(program, fshader);
+            //Gl.LinkProgram(program);
             Gl.DetachShader(program, vshader);
             Gl.DetachShader(program, fshader);
             Gl.DeleteShader(vshader);
