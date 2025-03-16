@@ -66,13 +66,16 @@ namespace Szeminarium1
             uint fshader = Gl.CreateShader(ShaderType.FragmentShader);
 
             Gl.ShaderSource(vshader, VertexShaderSource);
-            Gl.CompileShader(vshader);
+            //Gl.CompileShader(vshader);
+            Gl.CompileShader(fshader);
             Gl.GetShader(vshader, ShaderParameterName.CompileStatus, out int vStatus);
             if (vStatus != (int)GLEnum.True)
                 throw new Exception("Vertex shader failed to compile: " + Gl.GetShaderInfoLog(vshader));
 
+
             Gl.ShaderSource(fshader, FragmentShaderSource);
-            Gl.CompileShader(fshader);
+            //Gl.CompileShader(fshader);
+            Gl.CompileShader(vshader);
 
             program = Gl.CreateProgram();
             Gl.AttachShader(program, vshader);
@@ -142,7 +145,8 @@ namespace Szeminarium1
             Gl.BufferData(GLEnum.ArrayBuffer, (ReadOnlySpan<float>)vertexArray.AsSpan(), GLEnum.StaticDraw);
             Gl.EnableVertexAttribArray(0); //0
             Gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 0, null);
-            //Gl.EnableVertexAttribArray(0); //0
+            Gl.EnableVertexAttribArray(0); //0
+            //ha mind a kettot kiveszem fekete lesz a 3-szog ha csak egyet akkor okes
 
             /*var error = Gl.GetError();
             if (error != GLEnum.NoError)
@@ -163,7 +167,8 @@ namespace Szeminarium1
             Gl.BindBuffer(GLEnum.ArrayBuffer, colors); //sor csere
             Gl.BufferData(GLEnum.ArrayBuffer, (ReadOnlySpan<float>)colorArray.AsSpan(), GLEnum.StaticDraw);
             Gl.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 0, null);
-            //Gl.EnableVertexAttribArray(1); //1
+            Gl.EnableVertexAttribArray(1); //1
+            //ha mind a kettot kiveszem fekete lesz a 3-szog ha csak egyet akkor okes 
 
             /*var error1 = Gl.GetError();
             if (error1 != GLEnum.NoError)
