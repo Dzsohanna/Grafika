@@ -21,14 +21,14 @@ namespace Szeminarium1
         void main()
         {
 			outCol = vCol;
-            gl_Position = vec4(vPos.x, vPos.y, vPos.z 1.0); 
+            gl_Position = vec4(vPos.x, vPos.y, vPos.z, 1.0); 
         }
         ";
         //hianyzok egy vesszo
         // Vertex shader failed to compile: ERROR: 0:11: '1.0' : syntax error syntax error
 
         private static readonly string FragmentShaderSource = @"
-        #version 330 core
+        #version 9 core
         out vec4 FragColor;
 		
 		in vec4 outCol;
@@ -38,6 +38,8 @@ namespace Szeminarium1
             FragColor = outCol;
         }
         ";
+        //rossz GLSL verzio van megadva ami nem letezik ezert nem fog lefordulni
+        //Error linking shader Attached fragment shader is not compiled.
 
         static void Main(string[] args)
         {
