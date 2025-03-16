@@ -66,20 +66,22 @@ namespace Szeminarium1
             uint fshader = Gl.CreateShader(ShaderType.FragmentShader);
 
             Gl.ShaderSource(vshader, VertexShaderSource);
-            //Gl.CompileShader(vshader);
-            Gl.CompileShader(fshader);
+            Gl.CompileShader(vshader);
+           // Gl.CompileShader(fshader);
             Gl.GetShader(vshader, ShaderParameterName.CompileStatus, out int vStatus);
             if (vStatus != (int)GLEnum.True)
                 throw new Exception("Vertex shader failed to compile: " + Gl.GetShaderInfoLog(vshader));
 
 
             Gl.ShaderSource(fshader, FragmentShaderSource);
-            //Gl.CompileShader(fshader);
-            Gl.CompileShader(vshader);
+            Gl.CompileShader(fshader);
+            //Gl.CompileShader(vshader);
+            //ha kicserelem a ket compilet akkor az expection lesz kiirva mert nem lesz compilalva a vshader
 
             program = Gl.CreateProgram();
-            Gl.AttachShader(program, vshader);
             Gl.AttachShader(program, fshader);
+            Gl.AttachShader(program, vshader);
+            //Gl.AttachShader(program, fshader);
             Gl.LinkProgram(program);
             Gl.DetachShader(program, vshader);
             Gl.DetachShader(program, fshader);
