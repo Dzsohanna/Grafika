@@ -21,10 +21,11 @@ namespace Szeminarium1
         void main()
         {
 			outCol = vCol;
-            gl_Position = vec4(vPos.x, vPos.y, vPos.z, 1.0);
+            gl_Position = vec4(vPos.x, vPos.y, vPos.z 1.0); 
         }
         ";
-
+        //hianyzok egy vesszo
+        // Vertex shader failed to compile: ERROR: 0:11: '1.0' : syntax error syntax error
 
         private static readonly string FragmentShaderSource = @"
         #version 330 core
@@ -80,11 +81,11 @@ namespace Szeminarium1
 
             program = Gl.CreateProgram();
             //Gl.AttachShader(program, fshader); //semmilyen hiba nem lesz
-            Gl.LinkProgram(program);
+            //Gl.LinkProgram(program); //Error linking shader Link called without any attached shader objects.
             Gl.AttachShader(program, vshader);
             //Gl.LinkProgram(program); //Fekete lesz a szin mert az szin nem lesz hozzaadva
             Gl.AttachShader(program, fshader);
-            //Gl.LinkProgram(program);
+            Gl.LinkProgram(program);
             Gl.DetachShader(program, vshader);
             Gl.DetachShader(program, fshader);
             Gl.DeleteShader(vshader);
