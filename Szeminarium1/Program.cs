@@ -28,7 +28,7 @@ namespace Szeminarium1
         // Vertex shader failed to compile: ERROR: 0:11: '1.0' : syntax error syntax error
 
         private static readonly string FragmentShaderSource = @"
-        #version 9 core
+        #version 330 core
         out vec4 FragColor;
 		
 		in vec4 outCol;
