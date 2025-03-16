@@ -118,13 +118,23 @@ namespace Szeminarium1
             Gl.BindVertexArray(vao);
 
             float[] vertexArray = new float[] {
-                -0.5f, 0.5f, 0.5f, //kikommentezve
-                +0.5f, +0.5f, 0.5f,
-                 -0.5f, -0.5f, 0.5f,
-                 0.5f, -0.5f, 0.5f
+                0f, 0.5f, 0f, //0
+                0.5f, +0.6f, 0f,//1
+                0f, -0.8f, 0f,//2
+                0.5f, -0.6f, 0f,//3
+
+                0f, 0.5f, 0f, //4
+                -0.5f, +0.6f, 0f,//5
+                0f, -0.8f, 0f,//6
+                -0.5f, -0.6f, 0f,//7
+
             };
 
             float[] colorArray = new float[] {
+                1.0f, 0.0f, 0.0f, 1.0f, //piros //kikommentezve
+                0.0f, 1.0f, 0.0f, 1.0f, //zold 
+                0.0f, 0.0f, 1.0f, 1.0f, //kek
+                1.0f, 0.0f, 0.0f, 1.0f, //piros
                 1.0f, 0.0f, 0.0f, 1.0f, //piros //kikommentezve
                 0.0f, 1.0f, 0.0f, 1.0f, //zold 
                 0.0f, 0.0f, 1.0f, 1.0f, //kek
@@ -135,7 +145,10 @@ namespace Szeminarium1
                 //0, 1, 3, //felcsereles 
                 //0, 2, 3
                 0, 1, 2,
-                2, 1, 3
+                2, 1, 3,
+
+                4,5,6,
+                6,5,7
             };
 
             uint vertices = Gl.GenBuffer();
