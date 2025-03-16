@@ -122,21 +122,36 @@ namespace Szeminarium1
                 0.6f, +0.6f, 0f,//1
                 0f, -0.35f, 0f,//2
                 0.45f, 0f, 0f,//3
+
                 -0.6f, +0.6f, 0f,//4
-                -0.45f, 0f, 0f,//5
-                0f, 0.9f, 0f //6
+                0f, 0.3f, 0f, //5
+                -0.45f, 0f, 0f,//6
+                0f, -0.35f, 0f,//7
+
+                -0.6f, +0.6f, 0f,//8
+                0f, 0.3f, 0f, //9
+                0f, 0.9f, 0f, //10
+                0.6f, +0.6f, 0f,//11
+
+                
 
             };
 
             float[] colorArray = new float[] {
                 1.0f, 0.0f, 0.0f, 1.0f, //piros //kikommentezve
-                0.0f, 1.0f, 0.0f, 1.0f, //zold 
+                1.0f, 0.0f, 0.0f, 1.0f,
+                1.0f, 0.0f, 0.0f, 1.0f,
+                1.0f, 0.0f, 0.0f, 1.0f,
+
                 0.0f, 0.0f, 1.0f, 1.0f, //kek
-                1.0f, 0.0f, 0.0f, 1.0f, //piros
-                1.0f, 0.0f, 0.0f, 1.0f, //piros //kikommentezve
+                0.0f, 0.0f, 1.0f, 1.0f,
+                0.0f, 0.0f, 1.0f, 1.0f,
+                0.0f, 0.0f, 1.0f, 1.0f,
+
                 0.0f, 1.0f, 0.0f, 1.0f, //zold 
-                0.0f, 0.0f, 1.0f, 1.0f, //kek
-                1.0f, 0.0f, 0.0f, 1.0f, //piros
+                0.0f, 1.0f, 0.0f, 1.0f,
+                0.0f, 1.0f, 0.0f, 1.0f,
+                0.0f, 1.0f, 0.0f, 1.0f,
             };
 
             uint[] indexArray = new uint[] { 
@@ -144,10 +159,10 @@ namespace Szeminarium1
                 //0, 2, 3
                 0, 1, 2,
                 2, 1, 3,
-                4,0,5,
-                5,0,2,
-                4,0,6,
-                6,0,1
+                4,5,6,
+                6,5,7,
+                8,9,10,
+                10,9,11
             };
 
             uint vertices = Gl.GenBuffer();
