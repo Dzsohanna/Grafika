@@ -80,8 +80,9 @@ namespace Szeminarium1
 
             program = Gl.CreateProgram();
             //Gl.AttachShader(program, fshader); //semmilyen hiba nem lesz
-            Gl.AttachShader(program, vshader);
             Gl.LinkProgram(program);
+            Gl.AttachShader(program, vshader);
+            //Gl.LinkProgram(program); //Fekete lesz a szin mert az szin nem lesz hozzaadva
             Gl.AttachShader(program, fshader);
             //Gl.LinkProgram(program);
             Gl.DetachShader(program, vshader);
