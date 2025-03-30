@@ -2,21 +2,16 @@
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
-using Szeminarium;
+using System.Drawing;
 
 namespace GrafikaSzeminarium
 {
     internal class Program
     {
         private static IWindow graphicWindow;
-
         private static GL Gl;
-
-        private static ModelObjectDescriptor cube;
-
+        private static List<ModelObjectDescriptor> rubiksCubePieces = new List<ModelObjectDescriptor>();
         private static CameraDescriptor camera = new CameraDescriptor();
-
-        private static CubeArrangementModel cubeArrangementModel = new CubeArrangementModel();
 
         private const string ModelMatrixVariableName = "uModel";
         private const string ViewMatrixVariableName = "uView";
@@ -25,27 +20,26 @@ namespace GrafikaSzeminarium
         private static readonly string VertexShaderSource = @"
         #version 330 core
         layout (location = 0) in vec3 vPos;
-		layout (location = 1) in vec4 vCol;
+        layout (location = 1) in vec4 vCol;
 
         uniform mat4 uModel;
         uniform mat4 uView;
         uniform mat4 uProjection;
 
-		out vec4 outCol;
+        out vec4 outCol;
         
         void main()
         {
-			outCol = vCol;
-            gl_Position = uProjection*uView*uModel*vec4(vPos.x, vPos.y, vPos.z, 1.0);
+            outCol = vCol;
+            gl_Position = uProjection * uView * uModel * vec4(vPos.x, vPos.y, vPos.z, 1.0);
         }
         ";
-
 
         private static readonly string FragmentShaderSource = @"
         #version 330 core
         out vec4 FragColor;
-		
-		in vec4 outCol;
+        
+        in vec4 outCol;
 
         void main()
         {
@@ -55,11 +49,19 @@ namespace GrafikaSzeminarium
 
         private static uint program;
 
+        private static readonly Color WHITE = Color.White;
+        private static readonly Color YELLOW = Color.Yellow;
+        private static readonly Color RED = Color.Red;
+        private static readonly Color ORANGE = Color.Orange;
+        private static readonly Color BLUE = Color.Blue;
+        private static readonly Color GREEN = Color.Green;
+        private static readonly Color BLACK = Color.Black;  
+
         static void Main(string[] args)
         {
             WindowOptions windowOptions = WindowOptions.Default;
             windowOptions.Title = "Grafika szeminárium";
-            windowOptions.Size = new Silk.NET.Maths.Vector2D<int>(500, 500);
+            windowOptions.Size = new Vector2D<int>(800, 800);
 
             graphicWindow = Window.Create(windowOptions);
 
@@ -73,7 +75,10 @@ namespace GrafikaSzeminarium
 
         private static void GraphicWindow_Closing()
         {
-            cube.Dispose();
+            foreach (var piece in rubiksCubePieces)
+            {
+                piece.Dispose();
+            }
             Gl.DeleteProgram(program);
         }
 
@@ -87,17 +92,26 @@ namespace GrafikaSzeminarium
                 keyboard.KeyDown += Keyboard_KeyDown;
             }
 
-            cube = ModelObjectDescriptor.CreateCube(Gl);
+            camera.DecreaseZYAngle();
+            camera.IncreaseZXAngle();
+            camera.IncreaseDistance();
+            camera.IncreaseDistance();
 
-            Gl.ClearColor(System.Drawing.Color.White);
-            
+            SetupShaderProgram();
+
+            CreateRubiksCube();
+
+            Gl.ClearColor(System.Drawing.Color.Beige);
+
             Gl.Enable(EnableCap.CullFace);
             Gl.CullFace(TriangleFace.Back);
 
             Gl.Enable(EnableCap.DepthTest);
             Gl.DepthFunc(DepthFunction.Lequal);
+        }
 
-
+        private static void SetupShaderProgram()
+        {
             uint vshader = Gl.CreateShader(ShaderType.VertexShader);
             uint fshader = Gl.CreateShader(ShaderType.FragmentShader);
 
@@ -122,15 +136,42 @@ namespace GrafikaSzeminarium
             Gl.DetachShader(program, fshader);
             Gl.DeleteShader(vshader);
             Gl.DeleteShader(fshader);
-            if ((ErrorCode)Gl.GetError() != ErrorCode.NoError)
-            {
-
-            }
 
             Gl.GetProgram(program, GLEnum.LinkStatus, out var status);
             if (status == 0)
             {
                 Console.WriteLine($"Error linking shader {Gl.GetProgramInfoLog(program)}");
+            }
+        }
+
+        private static void CreateRubiksCube()
+        {
+            float cubeSize = 0.25f;
+            float gap = 0.01f;
+            float offset = cubeSize + gap;
+
+            for (int x = -1; x <= 1; x++)
+            {
+                for (int y = -1; y <= 1; y++)
+                {
+                    for (int z = -1; z <= 1; z++)
+                    {
+                        Dictionary<Direction, Color> faceColors = new Dictionary<Direction, Color>
+                        {
+                            { Direction.Top, y == 1 ? WHITE : BLACK },
+                            { Direction.Bottom, y == -1 ? YELLOW : BLACK },
+                            { Direction.Left, x == -1 ? ORANGE : BLACK },
+                            { Direction.Right, x == 1 ? RED : BLACK },
+                            { Direction.Front, z == 1 ? GREEN : BLACK },
+                            { Direction.Back, z == -1 ? BLUE : BLACK }
+                        };
+
+                        var cube = RubiksCubeFactory.CreateSmallCube(Gl, faceColors);
+                        rubiksCubePieces.Add(cube);
+
+                        cube.Position = new Vector3D<float>(x * offset, y * offset, z * offset);
+                    }
+                }
             }
         }
 
@@ -156,17 +197,12 @@ namespace GrafikaSzeminarium
                 case Key.D:
                     camera.DecreaseZXAngle();
                     break;
-                case Key.Space:
-                    cubeArrangementModel.AnimationEnabled = !cubeArrangementModel.AnimationEnabled;
-                    break;
             }
         }
 
         private static void GraphicWindow_Update(double deltaTime)
         {
-            // NO OpenGL
-            // make it threadsafe
-            cubeArrangementModel.AdvanceTime(deltaTime);
+            // Nothing to update
         }
 
         private static unsafe void GraphicWindow_Render(double deltaTime)
@@ -179,27 +215,16 @@ namespace GrafikaSzeminarium
             var viewMatrix = Matrix4X4.CreateLookAt(camera.Position, camera.Target, camera.UpVector);
             SetMatrix(viewMatrix, ViewMatrixVariableName);
 
-            var projectionMatrix = Matrix4X4.CreatePerspectiveFieldOfView<float>((float)(Math.PI / 2), 1024f / 768f, 0.1f, 100f);
+            var projectionMatrix = Matrix4X4.CreatePerspectiveFieldOfView<float>((float)(Math.PI / 4), 1.0f, 0.1f, 100f);
             SetMatrix(projectionMatrix, ProjectionMatrixVariableName);
 
-
-            var modelMatrixCenterCube = Matrix4X4.CreateScale((float)cubeArrangementModel.CenterCubeScale);
-            SetMatrix(modelMatrixCenterCube, ModelMatrixVariableName);
-            DrawModelObject(cube);
-
-            for (int x = -1; x <= 1; x++)
+            foreach (var piece in rubiksCubePieces)
             {
-                for (int y = -1; y <= 1; y++)
-                {
-                    for (int z = -1; z <= 1; z++)
-                    {
-                        Matrix4X4<float> translationMatrix = Matrix4X4.CreateTranslation(x * 1.1f, y * 1.1f, z * 1.1f);
-                        SetMatrix(translationMatrix, ModelMatrixVariableName);
-                        DrawModelObject(cube);
-                    }
-                }
+                Matrix4X4<float> modelMatrix = Matrix4X4.CreateScale(0.25f) *
+                                              Matrix4X4.CreateTranslation(piece.Position);
+                SetMatrix(modelMatrix, ModelMatrixVariableName);
+                DrawModelObject(piece);
             }
-
         }
 
         private static unsafe void DrawModelObject(ModelObjectDescriptor modelObject)
@@ -216,7 +241,7 @@ namespace GrafikaSzeminarium
             int location = Gl.GetUniformLocation(program, uniformName);
             if (location == -1)
             {
-                throw new Exception($"{ViewMatrixVariableName} uniform not found on shader.");
+                throw new Exception($"{uniformName} uniform not found on shader.");
             }
 
             Gl.UniformMatrix4(location, 1, false, (float*)&mx);
