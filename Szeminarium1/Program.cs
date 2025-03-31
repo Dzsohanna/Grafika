@@ -16,6 +16,12 @@ namespace GrafikaSzeminarium
         private const string ModelMatrixVariableName = "uModel";
         private const string ViewMatrixVariableName = "uView";
         private const string ProjectionMatrixVariableName = "uProjection";
+        private const string RotationMatrixVariableName = "uRotation";  
+                 private static bool isAnimating = false;
+        private static float currentRotationAngle = 0f;
+        private static float rotationDirection = 1f;          private static float rotationSpeed = 180f;          private static List<int> piecesToRotateIndices = new List<int>();
+        private static char rotationAxis = 'y';          private static int sliceIndex = 1;  
+                 private static Dictionary<int, Dictionary<Direction, Color>> cubeFaceColors = new Dictionary<int, Dictionary<Direction, Color>>();
 
         private static readonly string VertexShaderSource = @"
         #version 330 core
@@ -25,13 +31,13 @@ namespace GrafikaSzeminarium
         uniform mat4 uModel;
         uniform mat4 uView;
         uniform mat4 uProjection;
-
+        uniform mat4 uRotation;  
         out vec4 outCol;
         
         void main()
         {
             outCol = vCol;
-            gl_Position = uProjection * uView * uModel * vec4(vPos.x, vPos.y, vPos.z, 1.0);
+            gl_Position = uProjection * uView * uRotation * uModel * vec4(vPos.x, vPos.y, vPos.z, 1.0);
         }
         ";
 
@@ -55,7 +61,7 @@ namespace GrafikaSzeminarium
         private static readonly Color ORANGE = Color.Orange;
         private static readonly Color BLUE = Color.Blue;
         private static readonly Color GREEN = Color.Green;
-        private static readonly Color BLACK = Color.Black;  
+        private static readonly Color BLACK = Color.Black;
 
         static void Main(string[] args)
         {
@@ -149,6 +155,7 @@ namespace GrafikaSzeminarium
             float cubeSize = 0.25f;
             float gap = 0.01f;
             float offset = cubeSize + gap;
+            int pieceIndex = 0;
 
             for (int x = -1; x <= 1; x++)
             {
@@ -168,8 +175,11 @@ namespace GrafikaSzeminarium
 
                         var cube = RubiksCubeFactory.CreateSmallCube(Gl, faceColors);
                         rubiksCubePieces.Add(cube);
-
                         cube.Position = new Vector3D<float>(x * offset, y * offset, z * offset);
+
+                                                 cubeFaceColors[pieceIndex] = new Dictionary<Direction, Color>(faceColors);
+                        cube.Index = pieceIndex;
+                        pieceIndex++;
                     }
                 }
             }
@@ -197,12 +207,187 @@ namespace GrafikaSzeminarium
                 case Key.D:
                     camera.DecreaseZXAngle();
                     break;
+                case Key.Space:
+                    if (!isAnimating)
+                    {
+                        StartRotation('y', 1, 1f);                      
+                    }
+                    break;
+                case Key.Backspace:
+                    if (!isAnimating)
+                    {
+                        StartRotation('y', 1, -1f);                      
+                    }
+                    break;
             }
+        }
+
+        private static void StartRotation(char axis, int slice, float direction)
+        {
+            if (isAnimating)
+                return;
+
+            isAnimating = true;
+            currentRotationAngle = 0f;
+            rotationDirection = direction;
+            rotationAxis = axis;
+            sliceIndex = slice;
+            piecesToRotateIndices.Clear();
+
+            for (int i = 0; i < rubiksCubePieces.Count; i++)
+            {
+                var piece = rubiksCubePieces[i];
+                bool shouldRotate = false;
+
+                switch (axis)
+                {
+                    case 'x':
+                        shouldRotate = Math.Abs(piece.Position.X - slice * (0.26f)) < 0.01f;
+                        break;
+                    case 'y':
+                        shouldRotate = Math.Abs(piece.Position.Y - slice * (0.26f)) < 0.01f;
+                        break;
+                    case 'z':
+                        shouldRotate = Math.Abs(piece.Position.Z - slice * (0.26f)) < 0.01f;
+                        break;
+                }
+
+                if (shouldRotate)
+                {
+                    piecesToRotateIndices.Add(i);
+                }
+            }
+        }
+
+        private static void FinishRotation()
+        {
+            if (!isAnimating)
+                return;
+
+            isAnimating = false;
+            currentRotationAngle = 0f;
+
+            foreach (int pieceIndex in piecesToRotateIndices)
+            {
+                var piece = rubiksCubePieces[pieceIndex];
+
+                                 Vector3D<float> rotatedPosition = RotatePoint(piece.Position);
+                piece.Position = rotatedPosition;
+
+                                 UpdateFaceColors(pieceIndex);
+            }
+
+                         RecreateCubePieces();
+
+            piecesToRotateIndices.Clear();
+        }
+
+        private static void UpdateFaceColors(int pieceIndex)
+        {
+            var faceColors = new Dictionary<Direction, Color>(cubeFaceColors[pieceIndex]);
+            var newFaceColors = new Dictionary<Direction, Color>();
+
+            if (rotationAxis == 'y' && sliceIndex == 1)
+            {
+                newFaceColors[Direction.Top] = faceColors[Direction.Top];
+                newFaceColors[Direction.Bottom] = faceColors[Direction.Bottom];
+
+                if (rotationDirection > 0)
+                {
+                    newFaceColors[Direction.Front] = faceColors[Direction.Left];
+                    newFaceColors[Direction.Left] = faceColors[Direction.Back];
+                    newFaceColors[Direction.Back] = faceColors[Direction.Right];
+                    newFaceColors[Direction.Right] = faceColors[Direction.Front];
+                }
+                else
+                {
+                    newFaceColors[Direction.Front] = faceColors[Direction.Right];
+                    newFaceColors[Direction.Right] = faceColors[Direction.Back];
+                    newFaceColors[Direction.Back] = faceColors[Direction.Left];
+                    newFaceColors[Direction.Left] = faceColors[Direction.Front];
+                }
+            }
+            else
+            {
+                foreach (var kvp in faceColors)
+                {
+                    newFaceColors[kvp.Key] = kvp.Value;
+                }
+            }
+
+            cubeFaceColors[pieceIndex] = newFaceColors;
+        }
+
+        private static void RecreateCubePieces()
+        {
+            var newCubePieces = new List<ModelObjectDescriptor>();
+
+            for (int i = 0; i < rubiksCubePieces.Count; i++)
+            {
+                var piece = rubiksCubePieces[i];
+                if (!cubeFaceColors.ContainsKey(piece.Index))
+                {
+                    cubeFaceColors[piece.Index] = new Dictionary<Direction, Color>
+                    {
+                        { Direction.Top, BLACK },
+                        { Direction.Bottom, BLACK },
+                        { Direction.Left, BLACK },
+                        { Direction.Right, BLACK },
+                        { Direction.Front, BLACK },
+                        { Direction.Back, BLACK }
+                    };
+                }
+                var cube = RubiksCubeFactory.CreateSmallCube(Gl, new Dictionary<Direction, Color>(cubeFaceColors[piece.Index]));
+                cube.Position = piece.Position;
+                cube.Index = piece.Index;
+                newCubePieces.Add(cube);
+            }
+
+            foreach (var piece in rubiksCubePieces)
+            {
+                piece.Dispose();
+            }
+
+            rubiksCubePieces = newCubePieces;
+        }
+
+        private static Vector3D<float> RotatePoint(Vector3D<float> point)
+        {
+            Matrix4X4<float> rotation;
+            float angle = MathF.PI / 2 * rotationDirection; 
+
+            switch (rotationAxis)
+            {
+                case 'x':
+                    rotation = Matrix4X4.CreateRotationX(angle);
+                    break;
+                case 'y':
+                    rotation = Matrix4X4.CreateRotationY(angle);
+                    break;
+                case 'z':
+                    rotation = Matrix4X4.CreateRotationZ(angle);
+                    break;
+                default:
+                    return point;
+            }
+            Vector4D<float> rotatedPoint = Vector4D.Transform(new Vector4D<float>(point.X, point.Y, point.Z, 1f),rotation);
+
+            return new Vector3D<float>(
+                (float)Math.Round(rotatedPoint.X * 100) / 100,
+                (float)Math.Round(rotatedPoint.Y * 100) / 100,
+                (float)Math.Round(rotatedPoint.Z * 100) / 100);
         }
 
         private static void GraphicWindow_Update(double deltaTime)
         {
-            // Nothing to update
+            if (isAnimating)
+            {
+                currentRotationAngle += (float)(rotationSpeed * deltaTime * rotationDirection);
+                if (Math.Abs(currentRotationAngle) >= 90f)
+                {
+                    FinishRotation();
+                }
+            }
         }
 
         private static unsafe void GraphicWindow_Render(double deltaTime)
@@ -218,11 +403,36 @@ namespace GrafikaSzeminarium
             var projectionMatrix = Matrix4X4.CreatePerspectiveFieldOfView<float>((float)(Math.PI / 4), 1.0f, 0.1f, 100f);
             SetMatrix(projectionMatrix, ProjectionMatrixVariableName);
 
-            foreach (var piece in rubiksCubePieces)
+            for (int i = 0; i < rubiksCubePieces.Count; i++)
             {
+                var piece = rubiksCubePieces[i];
+
                 Matrix4X4<float> modelMatrix = Matrix4X4.CreateScale(0.25f) *
                                               Matrix4X4.CreateTranslation(piece.Position);
                 SetMatrix(modelMatrix, ModelMatrixVariableName);
+
+                bool shouldRotate = piecesToRotateIndices.Contains(i);
+                Matrix4X4<float> rotationMatrix = Matrix4X4<float>.Identity;
+
+                if (shouldRotate && isAnimating)
+                {
+                    float angleInRadians = currentRotationAngle * (MathF.PI / 180.0f);
+
+                    switch (rotationAxis)
+                    {
+                        case 'x':
+                            rotationMatrix = Matrix4X4.CreateRotationX(angleInRadians);
+                            break;
+                        case 'y':
+                            rotationMatrix = Matrix4X4.CreateRotationY(angleInRadians);
+                            break;
+                        case 'z':
+                            rotationMatrix = Matrix4X4.CreateRotationZ(angleInRadians);
+                            break;
+                    }
+                }
+
+                SetMatrix(rotationMatrix, RotationMatrixVariableName);
                 DrawModelObject(piece);
             }
         }

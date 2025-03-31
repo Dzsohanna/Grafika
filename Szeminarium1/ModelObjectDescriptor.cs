@@ -14,6 +14,8 @@ namespace GrafikaSzeminarium
         public uint Indices { get; set; }
         public uint IndexArrayLength { get; set; }
         public Vector3D<float> Position { get; set; }
+        public Vector3D<float> OriginalPosition { get; set; }
+        public int Index { get; set; }
 
         public GL Gl { get; set; }
 
@@ -23,11 +25,9 @@ namespace GrafikaSzeminarium
             {
                 if (disposing)
                 {
-                    // TODO: dispose managed state (managed objects)
-                }
+                                     }
 
-                // Always unbind the vertex buffer first
-                Gl.DeleteBuffer(Vertices);
+                                 Gl.DeleteBuffer(Vertices);
                 Gl.DeleteBuffer(Colors);
                 Gl.DeleteBuffer(Indices);
                 Gl.DeleteVertexArray(Vao);

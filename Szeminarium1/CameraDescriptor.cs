@@ -11,9 +11,6 @@ namespace GrafikaSzeminarium
         const double DistanceScaleFactor = 1.1;
         const double AngleChangeStepSize = Math.PI / 180 * 5;
 
-        /// <summary>
-        /// Gets the position of the camera.
-        /// </summary>
         public Vector3D<float> Position
         {
             get
@@ -22,9 +19,6 @@ namespace GrafikaSzeminarium
             }
         }
 
-        /// <summary>
-        /// Gets the up vector of the camera.
-        /// </summary>
         public Vector3D<float> UpVector
         {
             get
@@ -33,14 +27,10 @@ namespace GrafikaSzeminarium
             }
         }
 
-        /// <summary>
-        /// Gets the target point of the camera view.
-        /// </summary>
         public Vector3D<float> Target
         {
             get
             {
-                // For the moment the camera is always pointed at the origin.
                 return Vector3D<float>.Zero;
             }
         }
