@@ -1,54 +1,128 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Silk.NET.OpenGL;
+using System.Drawing;
 
-namespace Szeminarium
+namespace GrafikaSzeminarium
 {
-    internal class CubeArrangementModel
+    public enum Direction
     {
-        /// <summary>
-        /// Gets or sets wheather the animation should run or it should be frozen.
-        /// </summary>
-        public bool AnimationEnabled { get; set; } = false;
+        Top,
+        Bottom,
+        Left,
+        Right,
+        Front,
+        Back
+    }
 
-        /// <summary>
-        /// The time of the simulation. It helps to calculate time dependent values.
-        /// </summary>
-        private double Time { get; set; } = 0;
-
-        /// <summary>
-        /// The value by which the center cube is scaled. It varies between 0.8 and 1.2 with respect to the original size.
-        /// </summary>
-        public double CenterCubeScale { get; private set; } = 1;
-
-        /// <summary>
-        /// The angle with which the diamond cube is rotated around the diagonal from bottom right front to top left back.
-        /// </summary>
-        public double DiamondCubeLocalAngle { get; private set; } = 0;
-
-        /// <summary>
-        /// The angle with which the diamond cube is rotated around the global Y axes.
-        /// </summary>
-        public double DiamondCubeGlobalYAngle { get; private set; } = 0;
-
-        internal void AdvanceTime(double deltaTime)
+    internal static class RubiksCubeFactory
+    {
+        public static unsafe ModelObjectDescriptor CreateSmallCube(GL Gl, Dictionary<Direction, Color> faceColors)
         {
-            // we do not advance the simulation when animation is stopped
-            if (!AnimationEnabled)
-                return;
+            uint vao = Gl.GenVertexArray();
+            Gl.BindVertexArray(vao);
 
-            // set a simulation time
-            Time += deltaTime;
+            var vertexArray = new float[] {
+                -0.5f, 0.5f, 0.5f,
+                0.5f, 0.5f, 0.5f,
+                0.5f, 0.5f, -0.5f,
+                -0.5f, 0.5f, -0.5f,
 
-            // lets produce an oscillating scale in time
-            CenterCubeScale = 1 + 0.2 * Math.Sin(1.5 * Time);
+                -0.5f, 0.5f, 0.5f,
+                -0.5f, -0.5f, 0.5f,
+                0.5f, -0.5f, 0.5f,
+                0.5f, 0.5f, 0.5f,
 
-            // the rotation angle is time x angular velocity;
-            DiamondCubeLocalAngle = Time * 10;
+                -0.5f, 0.5f, 0.5f,
+                -0.5f, 0.5f, -0.5f,
+                -0.5f, -0.5f, -0.5f,
+                -0.5f, -0.5f, 0.5f,
 
-            DiamondCubeGlobalYAngle = -Time;
+                -0.5f, -0.5f, 0.5f,
+                0.5f, -0.5f, 0.5f,
+                0.5f, -0.5f, -0.5f,
+                -0.5f, -0.5f, -0.5f,
+
+                0.5f, 0.5f, -0.5f,
+                -0.5f, 0.5f, -0.5f,
+                -0.5f, -0.5f, -0.5f,
+                0.5f, -0.5f, -0.5f,
+
+                0.5f, 0.5f, 0.5f,
+                0.5f, 0.5f, -0.5f,
+                0.5f, -0.5f, -0.5f,
+                0.5f, -0.5f, 0.5f,
+            };
+
+            float[] colorArray = new float[24 * 4];
+
+            ApplyFaceColor(colorArray, 0, faceColors[Direction.Top]);
+            ApplyFaceColor(colorArray, 4, faceColors[Direction.Front]);
+            ApplyFaceColor(colorArray, 8, faceColors[Direction.Left]);
+            ApplyFaceColor(colorArray, 12, faceColors[Direction.Bottom]);
+            ApplyFaceColor(colorArray, 16, faceColors[Direction.Back]);
+            ApplyFaceColor(colorArray, 20, faceColors[Direction.Right]);
+
+            uint[] indexArray = new uint[] {
+                0, 1, 2,
+                0, 2, 3,
+
+                4, 5, 6,
+                4, 6, 7,
+
+                8, 9, 10,
+                10, 11, 8,
+
+                12, 14, 13,
+                12, 15, 14,
+
+                17, 16, 19,
+                17, 19, 18,
+
+                20, 22, 21,
+                20, 23, 22
+            };
+
+            uint vertices = Gl.GenBuffer();
+            Gl.BindBuffer(GLEnum.ArrayBuffer, vertices);
+            Gl.BufferData(GLEnum.ArrayBuffer, (ReadOnlySpan<float>)vertexArray.AsSpan(), GLEnum.StaticDraw);
+            Gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 0, null);
+            Gl.EnableVertexAttribArray(0);
+            Gl.BindBuffer(GLEnum.ArrayBuffer, 0);
+
+            uint colors = Gl.GenBuffer();
+            Gl.BindBuffer(GLEnum.ArrayBuffer, colors);
+            Gl.BufferData(GLEnum.ArrayBuffer, (ReadOnlySpan<float>)colorArray.AsSpan(), GLEnum.StaticDraw);
+            Gl.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 0, null);
+            Gl.EnableVertexAttribArray(1);
+            Gl.BindBuffer(GLEnum.ArrayBuffer, 0);
+
+            uint indices = Gl.GenBuffer();
+            Gl.BindBuffer(GLEnum.ElementArrayBuffer, indices);
+            Gl.BufferData(GLEnum.ElementArrayBuffer, (ReadOnlySpan<uint>)indexArray.AsSpan(), GLEnum.StaticDraw);
+            Gl.BindBuffer(GLEnum.ElementArrayBuffer, 0);
+
+            Gl.BindVertexArray(0);
+
+            return new ModelObjectDescriptor()
+            {
+                Vao = vao,
+                Vertices = vertices,
+                Colors = colors,
+                Indices = indices,
+                IndexArrayLength = (uint)indexArray.Length,
+                Gl = Gl
+            };
+        }
+
+        private static void ApplyFaceColor(float[] colorArray, int startVertex, Color color)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                int idx = (startVertex + i) * 4;
+                colorArray[idx] = color.R / 255.0f;
+                colorArray[idx + 1] = color.G / 255.0f;
+                colorArray[idx + 2] = color.B / 255.0f;
+                colorArray[idx + 3] = 1.0f;
+            }
         }
     }
 }
