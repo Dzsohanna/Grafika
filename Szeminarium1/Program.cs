@@ -197,23 +197,29 @@ namespace GrafikaSzeminarium
             SetMatrix(projectionMatrix, ProjectionMatrixVariableName);
 
             int rectangleCount = 18;
-            float radius = 1.5f;
             float angleStep = 2.0f * (float)Math.PI / rectangleCount;
+            float rectWidth = 1f;
+            float rectHeight = 2f;
+            float rectDepth = 0.1f;
+
+            float halfAngleRad = angleStep / 2f;
+            float radius = (rectWidth / 2f) / (float)Math.Tan(halfAngleRad);
 
             for (int i = 0; i < rectangleCount; i++)
             {
                 float angle = i * angleStep;
-                float x = (float)Math.Cos(angle) * radius;
-                float z = (float)Math.Sin(angle) * radius;
+                float x = (float)Math.Sin(angle) * radius;
+                float z = (float)Math.Cos(angle) * radius;
 
-                Matrix4X4<float> scale = Matrix4X4.CreateScale(0.1f, 1f, 0.2f);
-                Matrix4X4<float> rotation = Matrix4X4.CreateRotationY(-angle);
+                Matrix4X4<float> scale = Matrix4X4.CreateScale(rectWidth, rectHeight, rectDepth);
+                Matrix4X4<float> rotation = Matrix4X4.CreateRotationY(angle);
                 Matrix4X4<float> translation = Matrix4X4.CreateTranslation(x, 0f, z);
-
                 Matrix4X4<float> modelMatrix = scale * rotation * translation;
+
                 SetModelMatrix(modelMatrix);
                 DrawModelObject(cube);
             }
+
 
             // ImGui UI
             ImGuiNET.ImGui.Begin("Lighting", ImGuiNET.ImGuiWindowFlags.AlwaysAutoResize | ImGuiNET.ImGuiWindowFlags.NoCollapse);
