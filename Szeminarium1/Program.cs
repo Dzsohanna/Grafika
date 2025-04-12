@@ -202,8 +202,13 @@ namespace GrafikaSzeminarium
             float rectHeight = 2f;
             float rectDepth = 0.1f;
 
+            //sugar kiszamitasa
             float halfAngleRad = angleStep / 2f;
             float radius = (rectWidth / 2f) / (float)Math.Tan(halfAngleRad);
+
+            Matrix4X4<float> Top = Matrix4X4.CreateTranslation(0f, 0f, 0f); //felso: elso modell
+            Matrix4X4<float> Bottom = Matrix4X4.CreateTranslation(0f, -5f, 0f); //also: masodik modell
+
 
             for (int i = 0; i < rectangleCount; i++)
             {
@@ -214,12 +219,43 @@ namespace GrafikaSzeminarium
                 Matrix4X4<float> scale = Matrix4X4.CreateScale(rectWidth, rectHeight, rectDepth);
                 Matrix4X4<float> rotation = Matrix4X4.CreateRotationY(angle);
                 Matrix4X4<float> translation = Matrix4X4.CreateTranslation(x, 0f, z);
-                Matrix4X4<float> modelMatrix = scale * rotation * translation;
+                Matrix4X4<float> modelMatrix = scale * rotation * translation * Top;
 
                 SetModelMatrix(modelMatrix);
                 DrawModelObject(cube);
             }
 
+
+            //kezdeti normal vektor
+            Vector3 previousNormal = new Vector3(0f, 1f, 0f);
+            float angleBetweenNormals = 10f * (float)Math.PI / 180f;
+
+            for (int i = 0; i < rectangleCount; i++)
+            {
+                float angle = i * angleStep;
+                float x = (float)Math.Sin(angle) * radius;
+                float z = (float)Math.Cos(angle) * radius;
+
+                Matrix4X4<float> scale = Matrix4X4.CreateScale(rectWidth, rectHeight, rectDepth);
+                Matrix4X4<float> rotation = Matrix4X4.CreateRotationY(angle);
+                Matrix4X4<float> translation = Matrix4X4.CreateTranslation(x, 0f, z);
+                Matrix4X4<float> modelMatrix = scale * rotation * translation * Bottom;
+
+                //elforgatas
+                float angleToRotate = i * angleBetweenNormals;
+                Matrix4X4<float> normalRotation = Matrix4X4.CreateRotationY(angleToRotate);
+                var systemNumericsMatrix = new System.Numerics.Matrix4x4(
+                    normalRotation.M11, normalRotation.M12, normalRotation.M13, normalRotation.M14,
+                    normalRotation.M21, normalRotation.M22, normalRotation.M23, normalRotation.M24,
+                    normalRotation.M31, normalRotation.M32, normalRotation.M33, normalRotation.M34,
+                    normalRotation.M41, normalRotation.M42, normalRotation.M43, normalRotation.M44
+                );
+
+                previousNormal = System.Numerics.Vector3.Transform(previousNormal, systemNumericsMatrix);
+
+                SetModelMatrix(modelMatrix);
+                DrawModelObject(cube);
+            }
 
             // ImGui UI
             ImGuiNET.ImGui.Begin("Lighting", ImGuiNET.ImGuiWindowFlags.AlwaysAutoResize | ImGuiNET.ImGuiWindowFlags.NoCollapse);
@@ -228,7 +264,6 @@ namespace GrafikaSzeminarium
 
             imGuiController.Render();
         }
-
 
         private static unsafe void SetModelMatrix(Matrix4X4<float> modelMatrix)
         {
