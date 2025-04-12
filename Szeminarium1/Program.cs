@@ -196,28 +196,33 @@ namespace GrafikaSzeminarium
             var projectionMatrix = Matrix4X4.CreatePerspectiveFieldOfView<float>((float)(Math.PI / 2), 1024f / 768f, 0.1f, 100f);
             SetMatrix(projectionMatrix, ProjectionMatrixVariableName);
 
+            int rectangleCount = 18;
+            float radius = 1.5f;
+            float angleStep = 2.0f * (float)Math.PI / rectangleCount;
 
-            var modelMatrixCenterCube = Matrix4X4.CreateScale((float)cubeArrangementModel.CenterCubeScale);
-            SetModelMatrix(modelMatrixCenterCube);
-            DrawModelObject(cube);
+            for (int i = 0; i < rectangleCount; i++)
+            {
+                float angle = i * angleStep;
+                float x = (float)Math.Cos(angle) * radius;
+                float z = (float)Math.Sin(angle) * radius;
 
-            Matrix4X4<float> diamondScale = Matrix4X4.CreateScale(0.25f);
-            Matrix4X4<float> rotx = Matrix4X4.CreateRotationX((float)Math.PI / 4f);
-            Matrix4X4<float> rotz = Matrix4X4.CreateRotationZ((float)Math.PI / 4f);
-            Matrix4X4<float> roty = Matrix4X4.CreateRotationY((float)cubeArrangementModel.DiamondCubeLocalAngle);
-            Matrix4X4<float> trans = Matrix4X4.CreateTranslation(1f, 1f, 0f);
-            Matrix4X4<float> rotGlobalY = Matrix4X4.CreateRotationY((float)cubeArrangementModel.DiamondCubeGlobalYAngle);
-            Matrix4X4<float> dimondCubeModelMatrix = diamondScale * rotx * rotz * roty * trans * rotGlobalY;
-            SetModelMatrix(dimondCubeModelMatrix);
-            DrawModelObject(cube);
+                Matrix4X4<float> scale = Matrix4X4.CreateScale(0.1f, 1f, 0.2f);
+                Matrix4X4<float> rotation = Matrix4X4.CreateRotationY(-angle);
+                Matrix4X4<float> translation = Matrix4X4.CreateTranslation(x, 0f, z);
 
-            //ImGuiNET.ImGui.ShowDemoWindow();
+                Matrix4X4<float> modelMatrix = scale * rotation * translation;
+                SetModelMatrix(modelMatrix);
+                DrawModelObject(cube);
+            }
+
+            // ImGui UI
             ImGuiNET.ImGui.Begin("Lighting", ImGuiNET.ImGuiWindowFlags.AlwaysAutoResize | ImGuiNET.ImGuiWindowFlags.NoCollapse);
             ImGuiNET.ImGui.SliderFloat("Shininess", ref shininess, 5, 100);
             ImGuiNET.ImGui.End();
 
             imGuiController.Render();
         }
+
 
         private static unsafe void SetModelMatrix(Matrix4X4<float> modelMatrix)
         {
