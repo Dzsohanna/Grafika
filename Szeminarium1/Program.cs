@@ -37,6 +37,11 @@ namespace GrafikaSzeminarium
 
         private static float shininess = 50;
 
+        private static Vector3 ambientStrength = new Vector3(0.1f, 0.1f, 0.1f);
+        private static Vector3 diffuseStrength = new Vector3(0.3f, 0.3f, 0.3f);
+        private static Vector3 specularStrength = new Vector3(0.6f, 0.6f, 0.6f);
+
+
         private static uint program;
 
         static void Main(string[] args)
@@ -186,10 +191,13 @@ namespace GrafikaSzeminarium
             Gl.UseProgram(program);
 
             SetUniform3(LightColorVariableName, new Vector3(1f, 1f, 1f));
-            SetUniform3(LightPositionVariableName, new Vector3(camera.Position.X, camera.Position.Y, camera.Position.Z));
+            SetUniform3(LightPositionVariableName, new Vector3(0f, 1.2f, 0f));
             SetUniform3(ViewPositionVariableName, new Vector3(camera.Position.X, camera.Position.Y, camera.Position.Z));
             SetUniform1(ShinenessVariableName, shininess);
 
+            SetUniform3("uAmbientStrength", ambientStrength);
+            SetUniform3("uDiffuseStrength", diffuseStrength);
+            SetUniform3("uSpecularStrength", specularStrength);
 
             var viewMatrix = Matrix4X4.CreateLookAt(camera.Position, camera.Target, camera.UpVector);
             SetMatrix(viewMatrix, ViewMatrixVariableName);
@@ -197,70 +205,39 @@ namespace GrafikaSzeminarium
             var projectionMatrix = Matrix4X4.CreatePerspectiveFieldOfView<float>((float)(Math.PI / 2), 1024f / 768f, 0.1f, 100f);
             SetMatrix(projectionMatrix, ProjectionMatrixVariableName);
 
-            int rectangleCount = 18;
-            float angleStep = 2.0f * (float)Math.PI / rectangleCount;
-            float rectWidth = 1f;
-            float rectHeight = 2f;
-            float rectDepth = 0.1f;
 
-            //sugar kiszamitasa
-            float halfAngleRad = angleStep / 2f;
-            float radius = (rectWidth / 2f) / (float)Math.Tan(halfAngleRad);
+            var modelMatrixCenterCube = Matrix4X4.CreateScale((float)cubeArrangementModel.CenterCubeScale);
+            SetModelMatrix(modelMatrixCenterCube);
+            DrawModelObject(cube);
 
-            Matrix4X4<float> Top = Matrix4X4.CreateTranslation(0f, 0f, 0f); //felso: elso modell
-            Matrix4X4<float> Bottom = Matrix4X4.CreateTranslation(0f, -5f, 0f); //also: masodik modell
+            Matrix4X4<float> diamondScale = Matrix4X4.CreateScale(0.25f);
+            Matrix4X4<float> rotx = Matrix4X4.CreateRotationX((float)Math.PI / 4f);
+            Matrix4X4<float> rotz = Matrix4X4.CreateRotationZ((float)Math.PI / 4f);
+            Matrix4X4<float> roty = Matrix4X4.CreateRotationY((float)cubeArrangementModel.DiamondCubeLocalAngle);
+            Matrix4X4<float> trans = Matrix4X4.CreateTranslation(1f, 1f, 0f);
+            Matrix4X4<float> rotGlobalY = Matrix4X4.CreateRotationY((float)cubeArrangementModel.DiamondCubeGlobalYAngle);
+            Matrix4X4<float> dimondCubeModelMatrix = diamondScale * rotx * rotz * roty * trans * rotGlobalY;
+            SetModelMatrix(dimondCubeModelMatrix);
+            DrawModelObject(cube);
 
-
-            for (int i = 0; i < rectangleCount; i++)
-            {
-                float angle = i * angleStep;
-                float x = (float)Math.Sin(angle) * radius;
-                float z = (float)Math.Cos(angle) * radius;
-
-                Matrix4X4<float> scale = Matrix4X4.CreateScale(rectWidth, rectHeight, rectDepth);
-                Matrix4X4<float> rotation = Matrix4X4.CreateRotationY(angle);
-                Matrix4X4<float> translation = Matrix4X4.CreateTranslation(x, 0f, z);
-                Matrix4X4<float> modelMatrix = scale * rotation * translation * Top;
-
-                SetModelMatrix(modelMatrix);
-                DrawModelObject(cube);
-            }
-
-
-            //kezdeti normal vektor
-            Vector3 previousNormal = new Vector3(0f, 1f, 0f);
-            float angleBetweenNormals = 10f * (float)Math.PI / 180f;
-
-            for (int i = 0; i < rectangleCount; i++)
-            {
-                float angle = i * angleStep;
-                float x = (float)Math.Sin(angle) * radius;
-                float z = (float)Math.Cos(angle) * radius;
-
-                Matrix4X4<float> scale = Matrix4X4.CreateScale(rectWidth, rectHeight, rectDepth);
-                Matrix4X4<float> rotation = Matrix4X4.CreateRotationY(angle);
-                Matrix4X4<float> translation = Matrix4X4.CreateTranslation(x, 0f, z);
-                Matrix4X4<float> modelMatrix = scale * rotation * translation * Bottom;
-
-                //elforgatas
-                float angleToRotate = i * angleBetweenNormals;
-                Matrix4X4<float> normalRotation = Matrix4X4.CreateRotationY(angleToRotate);
-                var systemNumericsMatrix = new System.Numerics.Matrix4x4(
-                    normalRotation.M11, normalRotation.M12, normalRotation.M13, normalRotation.M14,
-                    normalRotation.M21, normalRotation.M22, normalRotation.M23, normalRotation.M24,
-                    normalRotation.M31, normalRotation.M32, normalRotation.M33, normalRotation.M34,
-                    normalRotation.M41, normalRotation.M42, normalRotation.M43, normalRotation.M44
-                );
-
-                previousNormal = System.Numerics.Vector3.Transform(previousNormal, systemNumericsMatrix);
-
-                SetModelMatrix(modelMatrix);
-                DrawModelObject(cube);
-            }
-
-            // ImGui UI
+            //ImGuiNET.ImGui.ShowDemoWindow();
             ImGuiNET.ImGui.Begin("Lighting", ImGuiNET.ImGuiWindowFlags.AlwaysAutoResize | ImGuiNET.ImGuiWindowFlags.NoCollapse);
             ImGuiNET.ImGui.SliderFloat("Shininess", ref shininess, 5, 100);
+
+            System.Numerics.Vector3 amb = new System.Numerics.Vector3(ambientStrength.X, ambientStrength.Y, ambientStrength.Z);
+            System.Numerics.Vector3 diff = new System.Numerics.Vector3(diffuseStrength.X, diffuseStrength.Y, diffuseStrength.Z);
+            System.Numerics.Vector3 spec = new System.Numerics.Vector3(specularStrength.X, specularStrength.Y, specularStrength.Z);
+
+            // Színes csúszkák (valójában 3 komponensű float slider)
+            if (ImGuiNET.ImGui.ColorEdit3("Ambient Strength", ref amb))
+                ambientStrength = new Vector3(amb.X, amb.Y, amb.Z);
+
+            if (ImGuiNET.ImGui.ColorEdit3("Diffuse Strength", ref diff))
+                diffuseStrength = new Vector3(diff.X, diff.Y, diff.Z);
+
+            if (ImGuiNET.ImGui.ColorEdit3("Specular Strength", ref spec))
+                specularStrength = new Vector3(spec.X, spec.Y, spec.Z);
+
             ImGuiNET.ImGui.End();
 
             imGuiController.Render();
