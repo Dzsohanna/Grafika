@@ -11,7 +11,7 @@ uniform vec3 uAmbientStrength;
 uniform vec3 uDiffuseStrength;
 uniform vec3 uSpecularStrength;
 
-in vec4 outCol;
+uniform vec3 uObjectColor;
 in vec3 outNormal;
 in vec3 outWorldPosition;
 
@@ -29,6 +29,6 @@ void main()
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), uShininess);
     vec3 specular = uSpecularStrength * spec * uLightColor;
 
-    vec3 result = (ambient + diffuse + specular) * outCol.rgb;
-    FragColor = vec4(result, outCol.w);
+    vec3 result = (ambient + diffuse + spec) * uObjectColor;
+    FragColor = vec4(result, 1.0);
 }

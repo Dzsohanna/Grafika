@@ -1,4 +1,5 @@
-﻿using Silk.NET.Input;
+﻿using ImGuiNET;
+using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
@@ -37,9 +38,31 @@ namespace GrafikaSzeminarium
 
         private static float shininess = 50;
 
+        //kezdo ertekek
         private static Vector3 ambientStrength = new Vector3(0.1f, 0.1f, 0.1f);
         private static Vector3 diffuseStrength = new Vector3(0.3f, 0.3f, 0.3f);
         private static Vector3 specularStrength = new Vector3(0.6f, 0.6f, 0.6f);
+        private static Vector3 lightColor = new Vector3(1f, 1f, 1f);
+
+
+        //objektum szinei
+        private static Vector3[] faceColors = new Vector3[]
+        {
+            new Vector3(1f, 0f, 0f), // Piros
+            new Vector3(0f, 1f, 0f), // Zold
+            new Vector3(0f, 0f, 1f), // Kek
+            new Vector3(1f, 1f, 0f), // Sarga
+            new Vector3(1f, 0f, 1f), // Lila
+            new Vector3(0f, 1f, 1f)  // Cian
+        };
+
+        private static string[] colorNames = new string[]
+        {
+            "Piros", "Zold", "Kek", "Sarga", "Lila", "Cian"
+        };
+
+        //a kivalasztott szin erteke
+        private static int selectedColorIndex = 0;
 
 
         private static uint program;
@@ -190,11 +213,14 @@ namespace GrafikaSzeminarium
 
             Gl.UseProgram(program);
 
-            SetUniform3(LightColorVariableName, new Vector3(1f, 1f, 1f));
+            //vilagitas parametereinek beallitasa
+            SetUniform3(LightColorVariableName, lightColor);
             SetUniform3(LightPositionVariableName, new Vector3(0f, 1.2f, 0f));
             SetUniform3(ViewPositionVariableName, new Vector3(camera.Position.X, camera.Position.Y, camera.Position.Z));
             SetUniform1(ShinenessVariableName, shininess);
+            SetUniform3("uObjectColor", faceColors[selectedColorIndex]);
 
+            //vilagitas erossegenek a beallitasa
             SetUniform3("uAmbientStrength", ambientStrength);
             SetUniform3("uDiffuseStrength", diffuseStrength);
             SetUniform3("uSpecularStrength", specularStrength);
@@ -224,19 +250,15 @@ namespace GrafikaSzeminarium
             ImGuiNET.ImGui.Begin("Lighting", ImGuiNET.ImGuiWindowFlags.AlwaysAutoResize | ImGuiNET.ImGuiWindowFlags.NoCollapse);
             ImGuiNET.ImGui.SliderFloat("Shininess", ref shininess, 5, 100);
 
-            System.Numerics.Vector3 amb = new System.Numerics.Vector3(ambientStrength.X, ambientStrength.Y, ambientStrength.Z);
-            System.Numerics.Vector3 diff = new System.Numerics.Vector3(diffuseStrength.X, diffuseStrength.Y, diffuseStrength.Z);
-            System.Numerics.Vector3 spec = new System.Numerics.Vector3(specularStrength.X, specularStrength.Y, specularStrength.Z);
+            //legordulo lista hogy kivalasszuk az uj szint
+            ImGuiNET.ImGui.Combo("Color", ref selectedColorIndex, colorNames, colorNames.Length);
 
-            // Színes csúszkák (valójában 3 komponensű float slider)
-            if (ImGuiNET.ImGui.ColorEdit3("Ambient Strength", ref amb))
-                ambientStrength = new Vector3(amb.X, amb.Y, amb.Z);
-
-            if (ImGuiNET.ImGui.ColorEdit3("Diffuse Strength", ref diff))
-                diffuseStrength = new Vector3(diff.X, diff.Y, diff.Z);
-
-            if (ImGuiNET.ImGui.ColorEdit3("Specular Strength", ref spec))
-                specularStrength = new Vector3(spec.X, spec.Y, spec.Z);
+            //csuszkak hogy allithassuk a feny komponenseit es szinet
+            ImGui.SliderFloat3("Ambient Strength", ref ambientStrength, 0f, 1f);
+            ImGui.SliderFloat3("Diffuse Strength", ref diffuseStrength, 0f, 1f);
+            ImGui.SliderFloat3("Specular Strength", ref specularStrength, 0f, 1f);
+            ImGui.SliderFloat3("Light", ref lightColor, 0f, 1f);
+            SetUniform3(LightColorVariableName, lightColor);
 
             ImGuiNET.ImGui.End();
 
