@@ -3,6 +3,8 @@ using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 using System.Drawing;
+using ImGuiNET;
+using Silk.NET.OpenGL.Extensions.ImGui;
 
 namespace GrafikaSzeminarium
 {
@@ -27,33 +29,67 @@ namespace GrafikaSzeminarium
         #version 330 core
         layout (location = 0) in vec3 vPos;
         layout (location = 1) in vec4 vCol;
+        layout (location = 2) in vec3 vNormal;
 
         uniform mat4 uModel;
         uniform mat4 uView;
         uniform mat4 uProjection;
         uniform mat4 uRotation;  
+
         out vec4 outCol;
-        
+        out vec3 Normal;
+        out vec3 FragPos;
+
         void main()
         {
             outCol = vCol;
-            gl_Position = uProjection * uView * uRotation * uModel * vec4(vPos.x, vPos.y, vPos.z, 1.0);
+            Normal = mat3(transpose(inverse(uRotation * uModel))) * vNormal;
+            FragPos = vec3(uRotation * uModel * vec4(vPos, 1.0));
+            gl_Position = uProjection * uView * uRotation * uModel * vec4(vPos, 1.0);
         }
         ";
 
         private static readonly string FragmentShaderSource = @"
         #version 330 core
         out vec4 FragColor;
-        
+
         in vec4 outCol;
+        in vec3 Normal;
+        in vec3 FragPos;
+
+        uniform vec3 lightPos;
+        uniform vec3 lightColor;
+        uniform vec3 viewPos;
 
         void main()
         {
-            FragColor = outCol;
+            float ambientStrength = 0.2;
+            vec3 ambient = ambientStrength * lightColor;
+    
+            vec3 norm = normalize(Normal);
+            vec3 lightDir = normalize(lightPos - FragPos);
+            float diff = max(dot(norm, lightDir), 0.0);
+            vec3 diffuse = diff * lightColor;
+    
+            float specularStrength = 0.5;
+            vec3 viewDir = normalize(viewPos - FragPos);
+            vec3 reflectDir = reflect(-lightDir, norm);
+            float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
+            vec3 specular = specularStrength * spec * lightColor;
+    
+            vec3 result = (ambient + diffuse + specular) * outCol.rgb;
+            FragColor = vec4(result, outCol.a);
         }
         ";
 
         private static uint program;
+
+        private static ImGuiController _imGuiController;
+        private static Vector3D<float> lightPos = new Vector3D<float>(1.0f, 1.0f, 1.0f);
+        private static Vector3D<float> lightColor = new Vector3D<float>(1.0f, 1.0f, 1.0f);
+        private static string lightPosX = "1.0";
+        private static string lightPosY = "1.0";
+        private static string lightPosZ = "1.0";
 
         private static readonly Color WHITE = Color.White;
         private static readonly Color YELLOW = Color.Yellow;
@@ -86,13 +122,14 @@ namespace GrafikaSzeminarium
                 piece.Dispose();
             }
             Gl.DeleteProgram(program);
+            _imGuiController?.Dispose();
         }
 
         private static void GraphicWindow_Load()
         {
             Gl = graphicWindow.CreateOpenGL();
-
             var inputContext = graphicWindow.CreateInput();
+            _imGuiController = new ImGuiController(Gl, graphicWindow, inputContext);
             foreach (var keyboard in inputContext.Keyboards)
             {
                 keyboard.KeyDown += Keyboard_KeyDown;
@@ -207,7 +244,7 @@ namespace GrafikaSzeminarium
                 case Key.D:
                     camera.DecreaseZXAngle();
                     break;
-                case Key.Space:
+                /*case Key.Space:
                     if (!isAnimating)
                     {
                         StartRotation('y', 1, 1f);
@@ -218,7 +255,7 @@ namespace GrafikaSzeminarium
                     {
                         StartRotation('y', 1, -1f);
                     }
-                    break;
+                    break;*/
             }
         }
 
@@ -380,6 +417,8 @@ namespace GrafikaSzeminarium
 
         private static void GraphicWindow_Update(double deltaTime)
         {
+            _imGuiController.Update((float)deltaTime);
+
             if (isAnimating)
             {
                 currentRotationAngle += (float)(rotationSpeed * deltaTime * rotationDirection);
@@ -388,6 +427,52 @@ namespace GrafikaSzeminarium
                     FinishRotation();
                 }
             }
+
+            ImGui.Begin("Rubik's Cube Controller");
+
+            //feny pozicio
+            float x = lightPos.X;
+            float y = lightPos.Y;
+            float z = lightPos.Z;
+
+            if (ImGui.InputFloat("X", ref x))
+            {
+                lightPos.X = x;
+            }
+            if (ImGui.InputFloat("Y", ref y))
+            {
+                lightPos.Y = y;
+            }
+            if (ImGui.InputFloat("Z", ref z))
+            {
+                lightPos.Z = z;
+            }
+
+
+
+            //szinek
+            ImGui.Text("Light Color");
+            System.Numerics.Vector3 imGuiColor = new System.Numerics.Vector3(lightColor.X, lightColor.Y, lightColor.Z);
+            if (ImGui.SliderFloat3("RGB", ref imGuiColor, 0.0f, 1.0f))
+            {
+                lightColor = new Vector3D<float>(imGuiColor.X, imGuiColor.Y, imGuiColor.Z);
+            }
+
+            //gombok - forgatas
+            ImGui.Separator();
+            ImGui.Text("Rotation Controls");
+
+            if (ImGui.Button("Rotate Y+ ") && !isAnimating)
+            {
+                StartRotation('y', 1, 1f);
+            }
+            ImGui.SameLine();
+            if (ImGui.Button("Rotate Y- ") && !isAnimating)
+            {
+                StartRotation('y', 1, -1f);
+            }
+
+            ImGui.End();
         }
 
         private static unsafe void GraphicWindow_Render(double deltaTime)
@@ -402,6 +487,10 @@ namespace GrafikaSzeminarium
 
             var projectionMatrix = Matrix4X4.CreatePerspectiveFieldOfView<float>((float)(Math.PI / 4), 1.0f, 0.1f, 100f);
             SetMatrix(projectionMatrix, ProjectionMatrixVariableName);
+
+            SetVector3(lightPos, "lightPos");
+            SetVector3(lightColor, "lightColor");
+            SetVector3(camera.Position, "viewPos");
 
             for (int i = 0; i < rubiksCubePieces.Count; i++)
             {
@@ -435,6 +524,8 @@ namespace GrafikaSzeminarium
                 SetMatrix(rotationMatrix, RotationMatrixVariableName);
                 DrawModelObject(piece);
             }
+
+            _imGuiController.Render();
         }
 
         private static unsafe void DrawModelObject(ModelObjectDescriptor modelObject)
@@ -456,6 +547,19 @@ namespace GrafikaSzeminarium
 
             Gl.UniformMatrix4(location, 1, false, (float*)&mx);
             CheckError();
+        }
+
+        private static unsafe void SetVector3(Vector3D<float> vec, string uniformName)
+        {
+            int location = Gl.GetUniformLocation(program, uniformName);
+            if (location == -1)
+            {
+                throw new Exception($"{uniformName} uniform not found on shader.");
+            }
+
+            Gl.Uniform3(location, vec.X, vec.Y, vec.Z);
+            CheckError();
+
         }
 
         public static void CheckError()
