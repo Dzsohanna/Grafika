@@ -23,7 +23,7 @@ namespace Szeminarium1_24_02_17_2
 
         private static uint program;
 
-        private static GlObject teapot;
+        private static GlObject centerCube; 
 
         private static GlObject table;
 
@@ -243,7 +243,7 @@ namespace Szeminarium1_24_02_17_2
             SetViewerPosition();
             SetShininess();
 
-            DrawPulsingTeapot();
+            DrawPulsingCenterCube();
 
             DrawRevolvingCube();
 
@@ -327,14 +327,14 @@ namespace Szeminarium1_24_02_17_2
             Gl.BindVertexArray(0);
         }
 
-        private static unsafe void DrawPulsingTeapot()
+        private static unsafe void DrawPulsingCenterCube()
         {
             // set material uniform to rubber
 
-            var modelMatrixForCenterCube = Matrix4X4.CreateScale((float)cubeArrangementModel.CenterCubeScale);
+            var modelMatrixForCenterCube = Matrix4X4.CreateScale((float)cubeArrangementModel.CenterCubeScale * 2.5f);
             SetModelMatrix(modelMatrixForCenterCube);
-            Gl.BindVertexArray(teapot.Vao);
-            Gl.DrawElements(GLEnum.Triangles, teapot.IndexArrayLength, GLEnum.UnsignedInt, null);
+            Gl.BindVertexArray(centerCube.Vao); 
+            Gl.DrawElements(GLEnum.Triangles, centerCube.IndexArrayLength, GLEnum.UnsignedInt, null);  
             Gl.BindVertexArray(0);
 
             var modelMatrixForTable = Matrix4X4.CreateScale(1f, 1f, 1f);
@@ -375,7 +375,6 @@ namespace Szeminarium1_24_02_17_2
 
         private static unsafe void SetUpObjects()
         {
-
             float[] face1Color = [1f, 0f, 0f, 1.0f];
             float[] face2Color = [0.0f, 1.0f, 0.0f, 1.0f];
             float[] face3Color = [0.0f, 0.0f, 1.0f, 1.0f];
@@ -383,23 +382,24 @@ namespace Szeminarium1_24_02_17_2
             float[] face5Color = [0.0f, 1.0f, 1.0f, 1.0f];
             float[] face6Color = [1.0f, 1.0f, 0.0f, 1.0f];
 
-            teapot = ObjResourceReader.CreateTeapotWithColor(Gl, face1Color);
+            string objFilePath = "Resources/cube.obj";
+            float[] centerCubeColor = [1f, 0f, 0f, 1.0f];
+            centerCube = ObjResourceReader.CreateModelFromObjFile(Gl, objFilePath, centerCubeColor);
 
             float[] tableColor = [System.Drawing.Color.Azure.R/256f,
                                   System.Drawing.Color.Azure.G/256f,
                                   System.Drawing.Color.Azure.B/256f,
-                                  1f];
+                                  0.3f];
             table = GlCube.CreateSquare(Gl, tableColor);
 
             glCubeRotating = GlCube.CreateCubeWithFaceColors(Gl, face1Color, face2Color, face3Color, face4Color, face5Color, face6Color);
         }
 
-        
-
         private static void Window_Closing()
         {
-            teapot.ReleaseGlObject();
+            centerCube.ReleaseGlObject();  
             glCubeRotating.ReleaseGlObject();
+            table.ReleaseGlObject();  
         }
 
         private static unsafe void SetProjectionMatrix()
