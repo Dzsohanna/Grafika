@@ -14,39 +14,9 @@ namespace Szeminarium1_24_02_17_2
 
         private const double AngleChangeStepSize = Math.PI / 180 * 5;
 
-        /// <summary>
-        /// Gets the position of the camera.
-        /// </summary>
-        public Vector3D<float> Position
-        {
-            get
-            {
-                return GetPointFromAngles(DistanceToOrigin, AngleToZYPlane, AngleToZXPlane);
-            }
-        }
-
-        /// <summary>
-        /// Gets the up vector of the camera.
-        /// </summary>
-        public Vector3D<float> UpVector
-        {
-            get
-            {
-                return Vector3D.Normalize(GetPointFromAngles(DistanceToOrigin, AngleToZYPlane, AngleToZXPlane + Math.PI / 2));
-            }
-        }
-
-        /// <summary>
-        /// Gets the target point of the camera view.
-        /// </summary>
-        public Vector3D<float> Target
-        {
-            get
-            {
-                // For the moment the camera is always pointed at the origin.
-                return Vector3D<float>.Zero;
-            }
-        }
+        public Vector3D<float> Position { get; private set; } = new Vector3D<float>(0, 2, 6);
+        public Vector3D<float> Target { get; private set; } = Vector3D<float>.Zero;
+        public Vector3D<float> UpVector { get; private set; } = Vector3D<float>.UnitY;
 
         public void IncreaseZXAngle()
         {
@@ -79,6 +49,15 @@ namespace Szeminarium1_24_02_17_2
             DistanceToOrigin = DistanceToOrigin / DistanceScaleFactor;
         }
 
+        public void MoveForward(float amount)
+        {
+             var direction = Vector3D.Normalize(-Position);
+            DistanceToOrigin -= amount;
+
+            if (DistanceToOrigin < 0.1f) DistanceToOrigin = 0.1f; // ne menjünk át az origón
+        }
+
+
         private static Vector3D<float> GetPointFromAngles(double distanceToOrigin, double angleToMinZYPlane, double angleToMinZXPlane)
         {
             var x = distanceToOrigin * Math.Cos(angleToMinZXPlane) * Math.Sin(angleToMinZYPlane);
@@ -87,5 +66,29 @@ namespace Szeminarium1_24_02_17_2
 
             return new Vector3D<float>((float)x, (float)y, (float)z);
         }
+
+        public void SetTopRearView()
+        {
+            DistanceToOrigin = 8;
+            AngleToZXPlane = Math.PI/10;
+            AngleToZYPlane = Math.PI *2;
+        }
+
+        public void FollowTarget(Vector3D<float> targetPosition, float targetRotation)
+        {
+             float distanceBehind = -5f;  // Növeljük a távolságot (eredetileg -5f volt)
+            float heightAbove = 1.5f;
+             var offsetX = (float)(Math.Sin(targetRotation) * distanceBehind);
+            var offsetZ = (float)(Math.Cos(targetRotation) * distanceBehind);
+             Position = new Vector3D<float>(
+                targetPosition.X - offsetX,
+                targetPosition.Y + heightAbove,
+                targetPosition.Z - offsetZ
+            );
+             Target = targetPosition;
+             UpVector = Vector3D<float>.UnitY;
+        }
+
+
     }
 }

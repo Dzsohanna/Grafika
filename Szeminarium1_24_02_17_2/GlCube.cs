@@ -189,7 +189,7 @@ namespace Szeminarium1_24_02_17_2
 
             // release array buffer
             Gl.BindBuffer(GLEnum.ArrayBuffer, 0);
-            uint indexArrayLength = (uint)indexArray.Length;
+            uint indexArrayLength = (uint)100;
 
             return new GlCube(vao, vertices, colors, indices, indexArrayLength, Gl);
         }
