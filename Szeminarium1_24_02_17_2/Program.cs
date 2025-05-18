@@ -28,20 +28,20 @@ namespace Szeminarium1_24_02_17_2
         private static Vector3D<float> carPosition = new Vector3D<float>(0f, 0.5f, 3f);
         private static float carSpeed = 0f;
         private static float carRotation = 0f;
-        private const float MaxSpeed = 0.5f;
-        private const float Acceleration = 0.01f;
+        private const float MaxSpeed = 1f;
+        private const float Acceleration = 0.05f;
         private const float RotationSpeed = 0.05f;
         private static List<CoinInstance> coins = new();
         private static int score = 0;
         private const float CoinCollectionDistance = 1.0f;
         private const int MaxCoins = 200;
-         private static float tableSize = 400f; 
-        private static float visibleDistance = 200f;
+        private static float tableSize = 100f;
+        private static float visibleDistance = 100f;
 
         private static List<BuildingInstance> buildings = new();
         private const int MaxBuildings = 200;
-        private const float BuildingGenerationDistance = 150f; 
-        private static float lastBuildingGenPosition = 0f; 
+        private const float BuildingGenerationDistance = 150f;
+        private static float lastBuildingGenPosition = 0f;
 
         private static float Shininess = 50;
 
@@ -129,7 +129,7 @@ namespace Szeminarium1_24_02_17_2
             WindowOptions windowOptions = WindowOptions.Default;
             windowOptions.Title = "Neon Racer";
             windowOptions.Size = new Vector2D<int>(1000, 800);
-             windowOptions.PreferredDepthBufferBits = 24;
+            windowOptions.PreferredDepthBufferBits = 24;
 
             window = Window.Create(windowOptions);
 
@@ -143,7 +143,7 @@ namespace Szeminarium1_24_02_17_2
 
         private static void Window_Load()
         {
-              inputContext = window.CreateInput();
+            inputContext = window.CreateInput();
             foreach (var keyboard in inputContext.Keyboards)
             {
                 keyboard.KeyDown += Keyboard_KeyDown;
@@ -152,9 +152,9 @@ namespace Szeminarium1_24_02_17_2
             Gl = window.CreateOpenGL();
 
             controller = new ImGuiController(Gl, window, inputContext);
-             window.FramebufferResize += s =>
+            window.FramebufferResize += s =>
             {
-                 Gl.Viewport(s);
+                Gl.Viewport(s);
             };
 
 
@@ -163,7 +163,7 @@ namespace Szeminarium1_24_02_17_2
             SetUpObjects();
 
             LinkProgram();
- 
+
             Gl.Enable(EnableCap.DepthTest);
             Gl.DepthFunc(DepthFunction.Lequal);
             cameraDescriptor.SetTopRearView();
@@ -204,16 +204,19 @@ namespace Szeminarium1_24_02_17_2
             switch (key)
             {
                 case Key.Left:
-                    carRotation += RotationSpeed; 
+                    carRotation += RotationSpeed;
                     break;
                 case Key.Right:
-                    carRotation -= RotationSpeed; 
+                    carRotation -= RotationSpeed;
                     break;
-                case Key.Space:
+                case Key.Up:
                     carSpeed = Math.Min(carSpeed + Acceleration, MaxSpeed);
                     break;
                 case Key.Down:
-                    carSpeed = Math.Min(carSpeed - Acceleration, MaxSpeed);
+                    carSpeed = Math.Max(carSpeed - Acceleration, 0);
+                    break;
+                case Key.Space:
+                    cameraDescriptor.ToggleCameraView();
                     break;
             }
         }
@@ -223,24 +226,23 @@ namespace Szeminarium1_24_02_17_2
             if (carSpeed > 0)
             {
                 carPosition.X -= (float)(carSpeed * Math.Sin(carRotation));
-                carPosition.Z -= (float)(carSpeed * Math.Cos(carRotation)); 
-                cameraDescriptor.FollowTarget(carPosition, carRotation);
+                carPosition.Z -= (float)(carSpeed * Math.Cos(carRotation));
                 CheckBuildingCollisions();
             }
             cameraDescriptor.FollowTarget(carPosition, carRotation);
             cubeArrangementModel.AdvanceTime(deltaTime);
-             GenerateBuildingsAhead();
-             foreach (var coin in coins.Where(c => !c.Collected))
+            GenerateBuildingsAhead();
+            foreach (var coin in coins.Where(c => !c.Collected))
             {
-                coin.Rotation += 0.1f; 
-                 float distance = Vector3D.Distance(carPosition, coin.Position);
+                coin.Rotation += 0.1f;
+                float distance = Vector3D.Distance(carPosition, coin.Position);
                 if (distance < CoinCollectionDistance)
                 {
                     coin.Collected = true;
                     score++;
                 }
             }
-             UpdateCoinsAhead();
+            UpdateCoinsAhead();
 
             controller.Update((float)deltaTime);
         }
@@ -249,15 +251,15 @@ namespace Szeminarium1_24_02_17_2
         {
             foreach (var building in buildings)
             {
-                 float carBuildingDistance = Vector3D.Distance(
-                    carPosition,
-                    building.Position
-                );
-                  float collisionThreshold = 1.0f + building.Width / 2;
+                float carBuildingDistance = Vector3D.Distance(
+                   carPosition,
+                   building.Position
+               );
+                float collisionThreshold = 1.0f + building.Width / 2;
 
                 if (carBuildingDistance < collisionThreshold)
                 {
-                     Console.WriteLine("Ütközés történt egy épülettel! Játék vége.");
+                    Console.WriteLine("Ütközés történt egy épülettel! Játék vége.");
                     window.Close();
                     break;
                 }
@@ -266,12 +268,12 @@ namespace Szeminarium1_24_02_17_2
 
         private static void GenerateBuildingsAhead()
         {
-             if (Math.Abs(carPosition.Z - lastBuildingGenPosition) < 50)
+            if (Math.Abs(carPosition.Z - lastBuildingGenPosition) < 50)
                 return;
 
             lastBuildingGenPosition = carPosition.Z;
-             buildings.RemoveAll(b => Vector3D.Distance(carPosition, b.Position) > visibleDistance * 1.5f);
-             while (buildings.Count < MaxBuildings)
+            buildings.RemoveAll(b => Vector3D.Distance(carPosition, b.Position) > visibleDistance * 1.5f);
+            while (buildings.Count < MaxBuildings)
             {
                 GenerateRandomBuilding();
             }
@@ -279,23 +281,23 @@ namespace Szeminarium1_24_02_17_2
 
         private static void GenerateRandomBuilding()
         {
-             float[] neonColor = [0.0f, 1.0f, 1.0f, 1.0f]; 
-             float width = 5f + (float)Random.Shared.NextDouble() * 1.0f;
+            float[] neonColor = [0.0f, 1.0f, 1.0f, 1.0f];
+            float width = 5f + (float)Random.Shared.NextDouble() * 1.0f;
             float height = 10f + (float)Random.Shared.NextDouble() * 2.0f;
             float depth = 5f + (float)Random.Shared.NextDouble() * 0.5f;
-             float minDistance = 10.0f; 
+            float minDistance = 10.0f;
             float angle = (float)Random.Shared.NextDouble() * MathF.PI * 2;
             float distance = minDistance + (float)Random.Shared.NextDouble() * BuildingGenerationDistance;
-             float posX = carPosition.X + MathF.Sin(angle) * distance;
-            float posZ = carPosition.Z - MathF.Cos(angle) * distance; 
-             posX = Math.Clamp(posX, -tableSize / 2 + width / 2, tableSize / 2 - width / 2);
+            float posX = carPosition.X + MathF.Sin(angle) * distance;
+            float posZ = carPosition.Z - MathF.Cos(angle) * distance;
+            posX = Math.Clamp(posX, -tableSize / 2 + width / 2, tableSize / 2 - width / 2);
             posZ = Math.Clamp(posZ, -tableSize / 2 + depth / 2, tableSize / 2 - depth / 2);
-             Vector3D<float> buildingPos = new Vector3D<float>(posX, height / 2, posZ);
+            Vector3D<float> buildingPos = new Vector3D<float>(posX, height / 2, posZ);
             if (Vector3D.Distance(carPosition, buildingPos) < minDistance)
                 return;
-             var building = GlCube.CreateCubeWithFaceColors(Gl,
-                neonColor, neonColor, neonColor,
-                neonColor, neonColor, neonColor);
+            var building = GlCube.CreateCubeWithFaceColors(Gl,
+               neonColor, neonColor, neonColor,
+               neonColor, neonColor, neonColor);
 
             buildings.Add(new BuildingInstance
             {
@@ -309,8 +311,8 @@ namespace Szeminarium1_24_02_17_2
 
         private static void UpdateCoinsAhead()
         {
-             coins.RemoveAll(c => c.Collected || Vector3D.Distance(carPosition, c.Position) > visibleDistance * 1.5f);
-             while (coins.Count < MaxCoins)
+            coins.RemoveAll(c => c.Collected || Vector3D.Distance(carPosition, c.Position) > visibleDistance * 1.5f);
+            while (coins.Count < MaxCoins)
             {
                 GenerateRandomCoin();
             }
@@ -318,17 +320,17 @@ namespace Szeminarium1_24_02_17_2
 
         private static void GenerateRandomCoin()
         {
-             float[] pureGoldColor = [1.0f, 0.84f, 0.0f, 1.0f];
-             float minDistance = 10.0f; 
+            float[] pureGoldColor = [1.0f, 0.84f, 0.0f, 1.0f];
+            float minDistance = 10.0f;
             float maxDistance = visibleDistance * 0.8f;
-            float angle = (float)Random.Shared.NextDouble() * MathF.PI * 2; 
+            float angle = (float)Random.Shared.NextDouble() * MathF.PI * 2;
             float distance = minDistance + (float)Random.Shared.NextDouble() * (maxDistance - minDistance);
-             float posX = carPosition.X + MathF.Sin(angle) * distance;
-            float posZ = carPosition.Z - MathF.Cos(angle) * distance; 
-             Vector3D<float> coinPos = new Vector3D<float>(posX, 0.3f, posZ);
-             if (buildings.Any(b => Vector3D.Distance(coinPos, b.Position) < 2.0f))
+            float posX = carPosition.X + MathF.Sin(angle) * distance;
+            float posZ = carPosition.Z - MathF.Cos(angle) * distance;
+            Vector3D<float> coinPos = new Vector3D<float>(posX, 0.3f, posZ);
+            if (buildings.Any(b => Vector3D.Distance(coinPos, b.Position) < 2.0f))
                 return;
-             var coinMesh = ObjResourceReader.CreateModelFromObjFile(Gl, "Resources/coin.obj", pureGoldColor);
+            var coinMesh = ObjResourceReader.CreateModelFromObjFile(Gl, "Resources/coin.obj", pureGoldColor);
 
             coins.Add(new CoinInstance
             {
@@ -353,9 +355,9 @@ namespace Szeminarium1_24_02_17_2
             SetLightPosition();
             SetViewerPosition();
             SetShininess();
-             DrawGameWorld();
-             ImGui.SetNextWindowPos(new System.Numerics.Vector2(window.Size.X - 150, 10), ImGuiCond.Always);
-            ImGui.SetNextWindowSize(new System.Numerics.Vector2(140, 60), ImGuiCond.Always);
+            DrawGameWorld();
+            ImGui.SetNextWindowPos(new System.Numerics.Vector2(window.Size.X - 160, 10), ImGuiCond.Always);
+            ImGui.SetNextWindowSize(new System.Numerics.Vector2(150, 60), ImGuiCond.Always);
             ImGui.Begin("Score", ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse);
             ImGui.Text($"Coins collected: {score}");
             ImGui.End();
@@ -370,7 +372,7 @@ namespace Szeminarium1_24_02_17_2
             {
                 throw new Exception($"{LightColorVariableName} uniform not found on shader.");
             }
-             Gl.Uniform3(location, 1.5f, 1.5f, 1.5f); 
+            Gl.Uniform3(location, 1.5f, 1.5f, 1.5f);
             CheckError();
         }
 
@@ -381,7 +383,7 @@ namespace Szeminarium1_24_02_17_2
             {
                 throw new Exception($"{LightPositionVariableName} uniform not found on shader.");
             }
-             Gl.Uniform3(location, carPosition.X, carPosition.Y + 6f, carPosition.Z);
+            Gl.Uniform3(location, carPosition.X, carPosition.Y + 6f, carPosition.Z);
 
             CheckError();
         }
@@ -414,12 +416,12 @@ namespace Szeminarium1_24_02_17_2
 
         private static unsafe void DrawGameWorld()
         {
-             var modelMatrixForTable = Matrix4X4.CreateScale(tableSize, 1f, tableSize);
+            var modelMatrixForTable = Matrix4X4.CreateScale(tableSize, 1f, tableSize);
             SetModelMatrix(modelMatrixForTable);
             Gl.BindVertexArray(table.Vao);
             Gl.DrawElements(GLEnum.Triangles, table.IndexArrayLength, GLEnum.UnsignedInt, null);
             Gl.BindVertexArray(0);
-             foreach (var building in buildings)
+            foreach (var building in buildings)
             {
                 var modelMatrix = Matrix4X4.CreateScale(building.Width, building.Height, building.Depth) *
                                 Matrix4X4.CreateTranslation(building.Position);
@@ -428,27 +430,27 @@ namespace Szeminarium1_24_02_17_2
                 Gl.BindVertexArray(building.Mesh.Vao);
                 Gl.DrawElements(GLEnum.Triangles, building.Mesh.IndexArrayLength, GLEnum.UnsignedInt, null);
             }
-             var modelMatrixForCar = Matrix4X4.CreateScale(0.7f) *
-                          Matrix4X4.CreateRotationY(carRotation) *
-                          Matrix4X4.CreateTranslation(carPosition);
+            var modelMatrixForCar = Matrix4X4.CreateScale(0.7f) *
+                         Matrix4X4.CreateRotationY(carRotation) *
+                         Matrix4X4.CreateTranslation(carPosition);
             SetModelMatrix(modelMatrixForCar);
             Gl.BindVertexArray(car.Vao);
             Gl.DrawElements(GLEnum.Triangles, car.IndexArrayLength, GLEnum.UnsignedInt, null);
             Gl.BindVertexArray(0);
-             int isCoinLocation = Gl.GetUniformLocation(program, "isCoin");
+            int isCoinLocation = Gl.GetUniformLocation(program, "isCoin");
             Gl.Uniform1(isCoinLocation, 1); // True for coins
-             foreach (var coin in coins.Where(c => !c.Collected))
+            foreach (var coin in coins.Where(c => !c.Collected))
             {
                 var modelMatrix = Matrix4X4.CreateScale(coin.Scale) *
-                                Matrix4X4.CreateRotationX(MathF.PI / 2) * 
-                                Matrix4X4.CreateRotationY(coin.Rotation) * 
+                                Matrix4X4.CreateRotationX(MathF.PI / 2) *
+                                Matrix4X4.CreateRotationY(coin.Rotation) *
                                 Matrix4X4.CreateTranslation(coin.Position);
 
                 SetModelMatrix(modelMatrix);
                 Gl.BindVertexArray(coin.Mesh.Vao);
                 Gl.DrawElements(GLEnum.Triangles, coin.Mesh.IndexArrayLength, GLEnum.UnsignedInt, null);
             }
-             Gl.Uniform1(isCoinLocation, 0);
+            Gl.Uniform1(isCoinLocation, 0);
         }
 
         private static unsafe void SetModelMatrix(Matrix4X4<float> modelMatrix)
@@ -482,15 +484,15 @@ namespace Szeminarium1_24_02_17_2
 
         private static unsafe void SetUpObjects()
         {
-             float[] tableColor = [0.32f, 0.3f, 0.32f, 1.0f];
+            float[] tableColor = [0.32f, 0.3f, 0.32f, 1.0f];
             table = GlCube.CreateSquare(Gl, tableColor);
-             float[] neonCarColor = [1.0f, 0.08f, 0.58f, 1.0f];
+            float[] neonCarColor = [1.0f, 0.08f, 0.58f, 1.0f];
             float[] windowColor = [0.1f, 0.1f, 0.2f, 0.4f];
             float[] wheelColor = [0.01f, 0.01f, 0.01f, 1.0f];
 
             string objFilePath = "Resources/car.obj";
             car = ObjResourceReader.CreateModelFromObjFile(Gl, objFilePath, neonCarColor);
-             for (int i = 0; i < MaxBuildings / 2; i++)
+            for (int i = 0; i < MaxBuildings / 2; i++)
             {
                 GenerateRandomBuilding();
             }

@@ -54,7 +54,7 @@ namespace Szeminarium1_24_02_17_2
              var direction = Vector3D.Normalize(-Position);
             DistanceToOrigin -= amount;
 
-            if (DistanceToOrigin < 0.1f) DistanceToOrigin = 0.1f; // ne menjünk át az origón
+            if (DistanceToOrigin < 0.1f) DistanceToOrigin = 0.1f; 
         }
 
 
@@ -73,20 +73,64 @@ namespace Szeminarium1_24_02_17_2
             AngleToZXPlane = Math.PI/10;
             AngleToZYPlane = Math.PI *2;
         }
+        public enum CameraMode
+        {
+            Follow,     
+            FirstPerson, 
+            TopDown     
+        }
+
+        private CameraMode currentMode = CameraMode.Follow;
+
+        public void ToggleCameraView()
+        {
+            currentMode = (CameraMode)(((int)currentMode + 1) % Enum.GetValues(typeof(CameraMode)).Length);
+        }
 
         public void FollowTarget(Vector3D<float> targetPosition, float targetRotation)
         {
-             float distanceBehind = -5f;  // Növeljük a távolságot (eredetileg -5f volt)
-            float heightAbove = 1.5f;
-             var offsetX = (float)(Math.Sin(targetRotation) * distanceBehind);
-            var offsetZ = (float)(Math.Cos(targetRotation) * distanceBehind);
-             Position = new Vector3D<float>(
-                targetPosition.X - offsetX,
-                targetPosition.Y + heightAbove,
-                targetPosition.Z - offsetZ
-            );
-             Target = targetPosition;
-             UpVector = Vector3D<float>.UnitY;
+            switch (currentMode)
+            {
+                case CameraMode.Follow:
+                    float distanceBehind = -5f;
+                    float heightAbove = 1.5f;
+                    var offsetX = (float)(Math.Sin(targetRotation) * distanceBehind);
+                    var offsetZ = (float)(Math.Cos(targetRotation) * distanceBehind);
+
+                    Position = new Vector3D<float>(
+                        targetPosition.X - offsetX,
+                        targetPosition.Y + heightAbove,
+                        targetPosition.Z - offsetZ
+                    );
+                    Target = targetPosition;
+                    UpVector = Vector3D<float>.UnitY;
+                    break;
+
+                case CameraMode.FirstPerson:
+                    float eyeHeight = 0.8f; 
+                    float lookAheadDistance = 10f; 
+
+                    Position = new Vector3D<float>(
+                        targetPosition.X,
+                        targetPosition.Y + eyeHeight,
+                        targetPosition.Z
+                    );
+
+                    Target = new Vector3D<float>(
+                        targetPosition.X - (float)Math.Sin(targetRotation) * lookAheadDistance,
+                        targetPosition.Y + eyeHeight,
+                        targetPosition.Z - (float)Math.Cos(targetRotation) * lookAheadDistance
+                    );
+
+                    UpVector = Vector3D<float>.UnitY;
+                    break;
+
+                case CameraMode.TopDown:
+                    Position = new Vector3D<float>(targetPosition.X, 10f, targetPosition.Z +15f);
+                    Target = targetPosition;
+                    UpVector = Vector3D<float>.UnitY;
+                    break;
+            }
         }
 
 
