@@ -31,10 +31,10 @@ namespace Szeminarium1_24_02_17_2
         private const float MaxSpeed = 1f;
         private const float Acceleration = 0.05f;
         private const float RotationSpeed = 0.05f;
-        private static List<CoinInstance> coins = new();
+        private static List<diamondInstance> diamonds = new();
         private static int score = 0;
-        private const float CoinCollectionDistance = 1.0f;
-        private const int MaxCoins = 200;
+        private const float diamondCollectionDistance = 1.0f;
+        private const int Maxdiamonds = 200;
         private static float tableSize = 100f;
         private static float visibleDistance = 100f;
 
@@ -86,7 +86,7 @@ namespace Szeminarium1_24_02_17_2
         uniform vec3 lightPos;
         uniform vec3 viewPos;
         uniform float shininess;
-        uniform bool isCoin;
+        uniform bool isdiamond;
 
         out vec4 FragColor;
 
@@ -96,11 +96,11 @@ namespace Szeminarium1_24_02_17_2
 
         void main()
         {
-            float ambientStrength = isCoin ? 0.8 : 0.4;
+            float ambientStrength = isdiamond ? 0.8 : 0.4;
             vec3 ambient = ambientStrength * outCol.rgb * 2.0;
     
-            float specularStrength = isCoin ? 2.0 : 1.5;
-            float shininessFactor = isCoin ? shininess * 2.0 : shininess * 0.3;
+            float specularStrength = isdiamond ? 2.0 : 1.5;
+            float shininessFactor = isdiamond ? shininess * 2.0 : shininess * 0.3;
     
             vec3 norm = normalize(outNormal);
             vec3 lightDir = normalize(lightPos - outWorldPosition);
@@ -114,7 +114,7 @@ namespace Szeminarium1_24_02_17_2
 
             vec3 result = (ambient + diffuse + specular) * outCol.rgb;
     
-            if (isCoin) {
+            if (isdiamond) {
                 result = outCol.rgb * 1.5;
             } else {
                 result = pow(result, vec3(1.0/1.2));
@@ -204,16 +204,30 @@ namespace Szeminarium1_24_02_17_2
             switch (key)
             {
                 case Key.Left:
-                    carRotation += RotationSpeed;
-                    break;
+                    if (carSpeed > 0)
+                    {
+                        carRotation += RotationSpeed;
+                    }
+                    else
+                    {
+                        carRotation -= RotationSpeed;
+                    }
+                        break;
                 case Key.Right:
-                    carRotation -= RotationSpeed;
+                    if (carSpeed > 0)
+                    {
+                        carRotation -= RotationSpeed;
+                    }
+                    else
+                    {
+                        carRotation += RotationSpeed;
+                    }
                     break;
                 case Key.Up:
                     carSpeed = Math.Min(carSpeed + Acceleration, MaxSpeed);
                     break;
                 case Key.Down:
-                    carSpeed = Math.Max(carSpeed - Acceleration, 0);
+                    carSpeed = Math.Max(carSpeed - Acceleration, -MaxSpeed);
                     break;
                 case Key.Space:
                     cameraDescriptor.ToggleCameraView();
@@ -223,43 +237,47 @@ namespace Szeminarium1_24_02_17_2
 
         private static void Window_Update(double deltaTime)
         {
-            if (carSpeed > 0)
+            if (carSpeed != 0)
             {
-                carPosition.X -= (float)(carSpeed * Math.Sin(carRotation));
-                carPosition.Z -= (float)(carSpeed * Math.Cos(carRotation));
+                carPosition.X -= (float)(Math.Abs(carSpeed) * Math.Sin(carRotation)) * Math.Sign(carSpeed);
+                carPosition.Z -= (float)(Math.Abs(carSpeed) * Math.Cos(carRotation)) * Math.Sign(carSpeed);
                 CheckBuildingCollisions();
             }
             cameraDescriptor.FollowTarget(carPosition, carRotation);
             cubeArrangementModel.AdvanceTime(deltaTime);
             GenerateBuildingsAhead();
-            foreach (var coin in coins.Where(c => !c.Collected))
+            foreach (var diamond in diamonds.Where(c => !c.Collected))
             {
-                coin.Rotation += 0.1f;
-                float distance = Vector3D.Distance(carPosition, coin.Position);
-                if (distance < CoinCollectionDistance)
+                diamond.Rotation += 0.1f;
+                float distance = Vector3D.Distance(carPosition, diamond.Position);
+                if (distance < diamondCollectionDistance)
                 {
-                    coin.Collected = true;
+                    diamond.Collected = true;
                     score++;
                 }
             }
-            UpdateCoinsAhead();
+            UpdatediamondsAhead();
 
             controller.Update((float)deltaTime);
         }
 
         private static void CheckBuildingCollisions()
         {
+            float collisionOffset = carSpeed > 0 ? 1.0f : -1.0f;
+            Vector3D<float> carCollisionPoint = new Vector3D<float>(
+                carPosition.X - collisionOffset * (float)Math.Sin(carRotation),
+                carPosition.Y,
+                carPosition.Z - collisionOffset * (float)Math.Cos(carRotation)
+            );
+
             foreach (var building in buildings)
             {
-                float carBuildingDistance = Vector3D.Distance(
-                   carPosition,
-                   building.Position
-               );
+                float distance = Vector3D.Distance(carCollisionPoint, building.Position);
                 float collisionThreshold = 1.0f + building.Width / 2;
 
-                if (carBuildingDistance < collisionThreshold)
+                if (distance < collisionThreshold)
                 {
-                    Console.WriteLine("Ütközés történt egy épülettel! Játék vége.");
+                    Console.WriteLine("GAME OVER");
                     window.Close();
                     break;
                 }
@@ -283,7 +301,7 @@ namespace Szeminarium1_24_02_17_2
         {
             float[] neonColor = [0.0f, 1.0f, 1.0f, 1.0f];
             float width = 5f + (float)Random.Shared.NextDouble() * 1.0f;
-            float height = 10f + (float)Random.Shared.NextDouble() * 2.0f;
+            float height = 5f + (float)Random.Shared.NextDouble() * 2.0f;
             float depth = 5f + (float)Random.Shared.NextDouble() * 0.5f;
             float minDistance = 10.0f;
             float angle = (float)Random.Shared.NextDouble() * MathF.PI * 2;
@@ -309,16 +327,16 @@ namespace Szeminarium1_24_02_17_2
             });
         }
 
-        private static void UpdateCoinsAhead()
+        private static void UpdatediamondsAhead()
         {
-            coins.RemoveAll(c => c.Collected || Vector3D.Distance(carPosition, c.Position) > visibleDistance * 1.5f);
-            while (coins.Count < MaxCoins)
+            diamonds.RemoveAll(c => c.Collected || Vector3D.Distance(carPosition, c.Position) > visibleDistance * 1.5f);
+            while (diamonds.Count < Maxdiamonds)
             {
-                GenerateRandomCoin();
+                GenerateRandomdiamond();
             }
         }
 
-        private static void GenerateRandomCoin()
+        private static void GenerateRandomdiamond()
         {
             float[] pureGoldColor = [1.0f, 0.84f, 0.0f, 1.0f];
             float minDistance = 10.0f;
@@ -327,19 +345,19 @@ namespace Szeminarium1_24_02_17_2
             float distance = minDistance + (float)Random.Shared.NextDouble() * (maxDistance - minDistance);
             float posX = carPosition.X + MathF.Sin(angle) * distance;
             float posZ = carPosition.Z - MathF.Cos(angle) * distance;
-            Vector3D<float> coinPos = new Vector3D<float>(posX, 0.3f, posZ);
-            if (buildings.Any(b => Vector3D.Distance(coinPos, b.Position) < 2.0f))
+            Vector3D<float> diamondPos = new Vector3D<float>(posX, 1f, posZ);
+            if (buildings.Any(b => Vector3D.Distance(diamondPos, b.Position) < 2.0f))
                 return;
-            var coinMesh = ObjResourceReader.CreateModelFromObjFile(Gl, "Resources/coin.obj", pureGoldColor);
+            var diamondMesh = ObjResourceReader.CreateModelFromObjFile(Gl, "Resources/diamond.obj", pureGoldColor);
 
-            coins.Add(new CoinInstance
+            diamonds.Add(new diamondInstance
             {
-                Mesh = coinMesh,
-                Position = coinPos,
+                Mesh = diamondMesh,
+                Position = diamondPos,
                 Collected = false,
                 Rotation = Random.Shared.NextSingle() * MathF.PI * 2,
-                Scale = 0.5f
-            });
+                Scale = 0.005f
+            });  
         }
 
         private static unsafe void Window_Render(double deltaTime)
@@ -359,7 +377,7 @@ namespace Szeminarium1_24_02_17_2
             ImGui.SetNextWindowPos(new System.Numerics.Vector2(window.Size.X - 160, 10), ImGuiCond.Always);
             ImGui.SetNextWindowSize(new System.Numerics.Vector2(150, 60), ImGuiCond.Always);
             ImGui.Begin("Score", ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse);
-            ImGui.Text($"Coins collected: {score}");
+            ImGui.Text($"diamonds collected: {score}");
             ImGui.End();
 
             controller.Render();
@@ -437,20 +455,20 @@ namespace Szeminarium1_24_02_17_2
             Gl.BindVertexArray(car.Vao);
             Gl.DrawElements(GLEnum.Triangles, car.IndexArrayLength, GLEnum.UnsignedInt, null);
             Gl.BindVertexArray(0);
-            int isCoinLocation = Gl.GetUniformLocation(program, "isCoin");
-            Gl.Uniform1(isCoinLocation, 1); // True for coins
-            foreach (var coin in coins.Where(c => !c.Collected))
+            int isdiamondLocation = Gl.GetUniformLocation(program, "isdiamond");
+            Gl.Uniform1(isdiamondLocation, 1);
+            foreach (var diamond in diamonds.Where(c => !c.Collected))
             {
-                var modelMatrix = Matrix4X4.CreateScale(coin.Scale) *
+                var modelMatrix = Matrix4X4.CreateScale(diamond.Scale) *
                                 Matrix4X4.CreateRotationX(MathF.PI / 2) *
-                                Matrix4X4.CreateRotationY(coin.Rotation) *
-                                Matrix4X4.CreateTranslation(coin.Position);
+                                Matrix4X4.CreateRotationY(diamond.Rotation) *
+                                Matrix4X4.CreateTranslation(diamond.Position);
 
                 SetModelMatrix(modelMatrix);
-                Gl.BindVertexArray(coin.Mesh.Vao);
-                Gl.DrawElements(GLEnum.Triangles, coin.Mesh.IndexArrayLength, GLEnum.UnsignedInt, null);
+                Gl.BindVertexArray(diamond.Mesh.Vao);
+                Gl.DrawElements(GLEnum.Triangles, diamond.Mesh.IndexArrayLength, GLEnum.UnsignedInt, null);
             }
-            Gl.Uniform1(isCoinLocation, 0);
+            Gl.Uniform1(isdiamondLocation, 0);
         }
 
         private static unsafe void SetModelMatrix(Matrix4X4<float> modelMatrix)
@@ -497,9 +515,9 @@ namespace Szeminarium1_24_02_17_2
                 GenerateRandomBuilding();
             }
 
-            for (int i = 0; i < MaxCoins / 2; i++)
+            for (int i = 0; i < Maxdiamonds / 2; i++)
             {
-                GenerateRandomCoin();
+                GenerateRandomdiamond();
             }
         }
 
@@ -513,9 +531,9 @@ namespace Szeminarium1_24_02_17_2
                 building.Mesh.ReleaseGlObject();
             }
 
-            foreach (var coin in coins)
+            foreach (var diamond in diamonds)
             {
-                coin.Mesh.ReleaseGlObject();
+                diamond.Mesh.ReleaseGlObject();
             }
         }
 
@@ -563,7 +581,7 @@ namespace Szeminarium1_24_02_17_2
             public Vector3D<float> Position;
         }
 
-        class CoinInstance
+        class diamondInstance
         {
             public GlObject Mesh { get; set; }
             public Vector3D<float> Position { get; set; }
