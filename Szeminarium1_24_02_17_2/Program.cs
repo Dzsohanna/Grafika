@@ -204,7 +204,7 @@ namespace Szeminarium1_24_02_17_2
             switch (key)
             {
                 case Key.Left:
-                    if (carSpeed > 0)
+                    if (carSpeed >= 0)
                     {
                         carRotation += RotationSpeed;
                     }
@@ -214,7 +214,7 @@ namespace Szeminarium1_24_02_17_2
                     }
                         break;
                 case Key.Right:
-                    if (carSpeed > 0)
+                    if (carSpeed >= 0)
                     {
                         carRotation -= RotationSpeed;
                     }
@@ -286,15 +286,119 @@ namespace Szeminarium1_24_02_17_2
 
         private static void GenerateBuildingsAhead()
         {
-            if (Math.Abs(carPosition.Z - lastBuildingGenPosition) < 50)
+            // Track the last check position to avoid frequent checks
+            float distanceMoved = Vector3D.Distance(new Vector3D<float>(carPosition.X, 0, carPosition.Z),
+                                                  new Vector3D<float>(lastBuildingGenPosition, 0, 0));
+
+            // Only generate new buildings if the car has moved a significant distance
+            if (distanceMoved < 10)
                 return;
 
+            // Update the generation position reference
             lastBuildingGenPosition = carPosition.Z;
+
+            // Remove buildings that are too far away
             buildings.RemoveAll(b => Vector3D.Distance(carPosition, b.Position) > visibleDistance * 1.5f);
-            while (buildings.Count < MaxBuildings)
+
+            // Calculate the area where we want to generate buildings
+            float minX = carPosition.X - visibleDistance;
+            float maxX = carPosition.X + visibleDistance;
+            float minZ = carPosition.Z - visibleDistance;
+            float maxZ = carPosition.Z + visibleDistance;
+
+            // Divide the area into a grid
+            const int gridSize = 20; // Number of cells in each direction
+            float cellWidth = (maxX - minX) / gridSize;
+            float cellDepth = (maxZ - minZ) / gridSize;
+
+            // Generate buildings in a more structured way
+            for (int i = 0; i < gridSize; i++)
             {
-                GenerateRandomBuilding();
+                for (int j = 0; j < gridSize; j++)
+                {
+                    // Calculate the center position of this grid cell
+                    float centerX = minX + (i + 0.5f) * cellWidth;
+                    float centerZ = minZ + (j + 0.5f) * cellDepth;
+
+                    // Distance from car to the center of this cell
+                    float distance = Vector3D.Distance(
+                        new Vector3D<float>(carPosition.X, 0, carPosition.Z),
+                        new Vector3D<float>(centerX, 0, centerZ));
+
+                    // Skip if too close to the car or outside generation range
+                    if (distance < 10 || distance > visibleDistance)
+                        continue;
+
+                    // Check if there's already a building near this cell
+                    bool buildingExists = buildings.Any(b =>
+                        Vector3D.Distance(
+                            new Vector3D<float>(centerX, 0, centerZ),
+                            new Vector3D<float>(b.Position.X, 0, b.Position.Z)) < cellWidth * 2);
+
+                    // If no building exists and we pass a random check, generate a building
+                    if (!buildingExists && Random.Shared.NextDouble() < 0.2)
+                    {
+                        // Random offset within the cell
+                        float offsetX = (float)(Random.Shared.NextDouble() - 0.5) * cellWidth * 0.5f;
+                        float offsetZ = (float)(Random.Shared.NextDouble() - 0.5) * cellDepth * 0.5f;
+
+                        // Final position with offset
+                        float posX = centerX + offsetX;
+                        float posZ = centerZ + offsetZ;
+
+                        // Check if within table bounds
+                        if (posX < -tableSize / 2 + 5 || posX > tableSize / 2 - 5 ||
+                            posZ < -tableSize / 2 + 5 || posZ > tableSize / 2 - 5)
+                            continue;
+
+                        // Create building with neon color
+                        float[] neonColor = GetRandomNeonColor();
+                        float width = 3f + (float)Random.Shared.NextDouble() * 3.0f;
+                        float height = 5f + (float)Random.Shared.NextDouble() * 15.0f;
+                        float depth = 3f + (float)Random.Shared.NextDouble() * 3.0f;
+
+                        Vector3D<float> buildingPos = new Vector3D<float>(posX, height / 2, posZ);
+
+                        var building = GlCube.CreateCubeWithFaceColors(Gl,
+                           neonColor, neonColor, neonColor,
+                           neonColor, neonColor, neonColor);
+
+                        buildings.Add(new BuildingInstance
+                        {
+                            Mesh = building,
+                            Width = width,
+                            Height = height,
+                            Depth = depth,
+                            Position = buildingPos
+                        });
+
+                        // Stop when max buildings is reached
+                        if (buildings.Count >= MaxBuildings)
+                            break;
+                    }
+                }
+
+                if (buildings.Count >= MaxBuildings)
+                    break;
             }
+        }
+
+        // Helper method to generate random neon colors
+        private static float[] GetRandomNeonColor()
+        {
+            // Define a set of vibrant neon colors
+            float[][] neonColors = new float[][]
+            {
+        new float[] { 1.0f, 0.0f, 1.0f, 1.0f },  // Magenta
+        new float[] { 0.0f, 1.0f, 1.0f, 1.0f },  // Cyan
+        new float[] { 1.0f, 0.5f, 0.0f, 1.0f },  // Orange
+        new float[] { 0.0f, 1.0f, 0.5f, 1.0f },  // Green
+        new float[] { 0.5f, 0.0f, 1.0f, 1.0f },  // Purple
+        new float[] { 1.0f, 1.0f, 0.0f, 1.0f },  // Yellow
+        new float[] { 0.0f, 0.5f, 1.0f, 1.0f },  // Blue
+            };
+
+            return neonColors[Random.Shared.Next(neonColors.Length)];
         }
 
         private static void GenerateRandomBuilding()
@@ -374,10 +478,10 @@ namespace Szeminarium1_24_02_17_2
             SetViewerPosition();
             SetShininess();
             DrawGameWorld();
-            ImGui.SetNextWindowPos(new System.Numerics.Vector2(window.Size.X - 160, 10), ImGuiCond.Always);
-            ImGui.SetNextWindowSize(new System.Numerics.Vector2(150, 60), ImGuiCond.Always);
+            ImGui.SetNextWindowPos(new System.Numerics.Vector2(window.Size.X - 180, 10), ImGuiCond.Always);
+            ImGui.SetNextWindowSize(new System.Numerics.Vector2(170, 60), ImGuiCond.Always);
             ImGui.Begin("Score", ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse);
-            ImGui.Text($"diamonds collected: {score}");
+            ImGui.Text($"Diamonds collected: {score}");
             ImGui.End();
 
             controller.Render();
